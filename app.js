@@ -124,7 +124,9 @@ function capsuleUrl(row) {
 
 function screenshotUrl(row, ssid) {
   if (row.isUser) return ssid; // user screenshots are data URLs already
-  return `https://cdn.cloudflare.steamstatic.com/steam/apps/${row.appid}/ss_${ssid}.jpg`;
+  // Steam's 600x338 variant matches the sidebar display size and is ~10x smaller
+  // than the default (full-resolution) variant.
+  return `https://cdn.cloudflare.steamstatic.com/steam/apps/${row.appid}/ss_${ssid}.600x338.jpg`;
 }
 
 function defaultUserGame() {
@@ -211,6 +213,11 @@ function capsuleRankApp() {
     userInsertIndex: null,
     activeRowKey: null,
 
+    // Mobile sidebar overlay state.
+    isMobile: false,
+    mobileSidebarOpen: false,
+    mobileSidebarTop: 0,
+
     // Capsule crop UI state (transient, not persisted).
     cropping: false,
     cropSourceUrl: null,
@@ -224,6 +231,7 @@ function capsuleRankApp() {
     async init() {
       this.hydrate();
       this.installPersister();
+      this.installMobileWatcher();
       try {
         const records = await dbAllCapsules();
         this.capsuleLibrary = records.sort((a, b) => b.createdAt - a.createdAt);
@@ -235,6 +243,39 @@ function capsuleRankApp() {
         this.userGame.tags = randomTags(this.games, 3);
       }
       this.refresh();
+    },
+
+    installMobileWatcher() {
+      const mq = window.matchMedia('(max-width: 900px)');
+      this.isMobile = mq.matches;
+      mq.addEventListener('change', e => {
+        this.isMobile = e.matches;
+        if (!e.matches) this.mobileSidebarOpen = false;
+      });
+      // Close the mobile sidebar when the user taps anywhere that's not inside the sidebar
+      // and not inside a row. Alpine's @click.outside fires in capture phase and races with
+      // the row's @click handler; a plain bubble-phase listener runs *after* row clicks,
+      // which lets us cleanly distinguish row taps (handled by onRowClick) from real outside taps.
+      document.addEventListener('click', (e) => {
+        if (!this.isMobile || !this.mobileSidebarOpen) return;
+        if (e.target.closest('.sidebar')) return;
+        if (e.target.closest('.row')) return;
+        this.mobileSidebarOpen = false;
+      });
+    },
+
+    onRowClick(rowKey, event) {
+      const sameRow = this.activeRowKey === rowKey;
+      this.activeRowKey = rowKey;
+      if (!this.isMobile) return;
+      // Tap the same row again → toggle the overlay closed (clear close gesture).
+      if (sameRow && this.mobileSidebarOpen) {
+        this.mobileSidebarOpen = false;
+        return;
+      }
+      const rowEl = event.currentTarget;
+      this.mobileSidebarTop = rowEl.offsetTop + rowEl.offsetHeight;
+      this.mobileSidebarOpen = true;
     },
 
     hydrate() {
@@ -304,6 +345,7 @@ function capsuleRankApp() {
       this.sampledGames = sampleGames(this.games, sampleSize);
       this.userInsertIndex = hasUser ? Math.floor(Math.random() * 10) : null;
       this.activeRowKey = this.displayedRows[0]?.key ?? null;
+      this.mobileSidebarOpen = false;
     },
 
     priceFor(row) { return formatPrice(row.price ?? 1199, row.discountPct ?? 0); },
