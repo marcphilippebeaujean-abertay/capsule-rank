@@ -21,7 +21,7 @@
     /* ===== Editor ===== */
     .editor { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: 2rem; padding: 1rem 2rem; }
     .editor-visuals { display: flex; flex-direction: column; gap: 1rem; }
-    .capsule-preview { display: block; width: min(460px, 100%); aspect-ratio: 460 / 215; background: #2a3f5a; border: 1px solid #4a6a8a; border-radius: 4px; overflow: hidden; position: relative; cursor: pointer; }
+    .capsule-preview { display: block; width: 460px; max-width: 100%; aspect-ratio: 460 / 215; background: #2a3f5a; border: 1px solid #4a6a8a; border-radius: 4px; overflow: hidden; position: relative; cursor: pointer; }
     .capsule-preview:hover { border-color: #66c0f4; }
     .capsule-preview.has-image { border-color: #66c0f4; }
     .capsule-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -30,7 +30,7 @@
     .icon-btn { background: rgba(0,0,0,.6); border: 0; color: white; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: grid; place-items: center; padding: 0; transition: background 100ms linear; }
     .icon-btn:hover { background: rgba(0,0,0,.85); color: #66c0f4; }
     .icon-btn svg { width: 14px; height: 14px; display: block; }
-    .capsule-library { display: flex; gap: .35rem; max-width: min(460px, 100%); overflow-x: auto; padding: .35rem 0; scrollbar-width: thin; }
+    .capsule-library { display: flex; gap: .35rem; width: 460px; max-width: 100%; overflow-x: auto; padding: .35rem 0; scrollbar-width: thin; }
     .capsule-thumb { position: relative; flex: 0 0 auto; width: 92px; aspect-ratio: 460 / 215; background: #2a3f5a; border: 2px solid transparent; border-radius: 3px; overflow: hidden; cursor: pointer; }
     .capsule-thumb.active { border-color: #66c0f4; }
     .capsule-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
@@ -147,9 +147,9 @@
 
     /* ===== Responsive ===== */
     @media (max-width: 900px) {
-      .editor { grid-template-columns: 1fr; padding: 1rem; gap: 1rem; }
+      .editor { grid-template-columns: minmax(0, 1fr); padding: 1rem; gap: 1rem; }
       .grid-section { padding: 1rem; }
-      .grid-layout { grid-template-columns: 1fr; }
+      .grid-layout { grid-template-columns: minmax(0, 1fr); }
       .row {
         grid-template-columns: 130px 1fr;
         grid-template-rows: auto auto auto;
