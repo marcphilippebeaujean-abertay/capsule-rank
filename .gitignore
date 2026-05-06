@@ -1,0 +1,34 @@
+# Local-only docs (specs, plans, scratch)
+docs/
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Debug artifacts from debug.mjs
+debug.png
+debug-*.png
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors / IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local env
+.env
+.env.*
+!.env.example
+
+# Playwright test outputs (in case we add a real test runner later)
+test-results/
+playwright-report/
+playwright/.cache/

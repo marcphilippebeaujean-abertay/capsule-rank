@@ -1,0 +1,300 @@
+[
+  {
+    "appid": 1086940,
+    "name": "Baldur's Gate 3",
+    "tags": [
+      "RPG",
+      "Story Rich",
+      "Choices Matter",
+      "Fantasy",
+      "Turn-Based Combat"
+    ],
+    "price": 5999,
+    "reviewSummary": "Overwhelmingly Positive",
+    "reviewCount": 783412,
+    "screenshotIds": [
+      "c73bc54415178c07fef85f54ee26621728c77504",
+      "73d93bea842b93914d966622104dcb8c0f42972b",
+      "cf936d31061b58e98e0c646aee00e6030c410cda",
+      "b6a6ee6e046426d08ceea7a4506a1b5f44181543"
+    ],
+    "platforms": [
+      "windows",
+      "mac"
+    ],
+    "releaseDate": "2023-08-03"
+  },
+  {
+    "appid": 1145360,
+    "name": "Hades",
+    "tags": [
+      "Roguelike",
+      "Action",
+      "Story Rich",
+      "Mythology"
+    ],
+    "price": 2499,
+    "discountPct": 50,
+    "reviewSummary": "Overwhelmingly Positive",
+    "reviewCount": 252148,
+    "screenshotIds": [
+      "c0fed447426b69981cf1721756acf75369801b31",
+      "8a9f0953e8a014bd3df2789c2835cb787cd3764d",
+      "68300459a8c3daacb2ec687adcdbf4442fcc4f47",
+      "bcb499a0dd001f4101823f99ec5094d2872ba6ee"
+    ],
+    "platforms": [
+      "windows",
+      "mac"
+    ],
+    "releaseDate": "2020-09-17"
+  },
+  {
+    "appid": 1245620,
+    "name": "ELDEN RING",
+    "tags": [
+      "Souls-like",
+      "Open World",
+      "Dark Fantasy",
+      "Difficult"
+    ],
+    "price": 5999,
+    "reviewSummary": "Very Positive",
+    "reviewCount": 657302,
+    "screenshotIds": [
+      "943bf6fe62352757d9070c1d33e50b92fe8539f1",
+      "dcdac9e4b26ac0ee5248bfd2967d764fd00cdb42",
+      "3c41384a24d86dddd58a8f61db77f9dc0bfda8b5",
+      "e0316c76f8197405c1312d072b84331dd735d60b"
+    ],
+    "platforms": [
+      "windows"
+    ],
+    "releaseDate": "2022-02-25"
+  },
+  {
+    "appid": 632360,
+    "name": "Risk of Rain 2",
+    "tags": [
+      "Roguelike",
+      "Third-Person Shooter",
+      "Co-op",
+      "Replay Value"
+    ],
+    "price": 2499,
+    "discountPct": 75,
+    "reviewSummary": "Overwhelmingly Positive",
+    "reviewCount": 168204,
+    "screenshotIds": [
+      "2bb49071317f7b241a527cf6e7aabd2cb6af055b",
+      "a3f57f281813cb51cb5d919701470acb962ff297",
+      "328d6fcb223f848c2a1047bb86702c4175d92317",
+      "dc777b5c583794c99440b196cd1d26884fb1720b"
+    ],
+    "platforms": [
+      "windows",
+      "mac",
+      "linux"
+    ],
+    "releaseDate": "2020-08-11"
+  },
+  {
+    "appid": 1627720,
+    "name": "Lies of P",
+    "tags": [
+      "Souls-like",
+      "Dark Fantasy",
+      "Action",
+      "Difficult"
+    ],
+    "price": 5999,
+    "discountPct": 30,
+    "reviewSummary": "Very Positive",
+    "reviewCount": 87930,
+    "screenshotIds": [
+      "cef0c2964b82e2b80ab0756da08f61c27d9fa33c",
+      "b510d9d65802c3cc776d1296c3daa1e9a79e3615",
+      "132a6579a7c2f3241e55ef9ce3eae798786168ad",
+      "26772232e759f37d0841d054cf30604fe4bba434"
+    ],
+    "platforms": [
+      "windows"
+    ],
+    "releaseDate": "2023-09-19"
+  },
+  {
+    "appid": 1142710,
+    "name": "Total War: WARHAMMER III",
+    "tags": [
+      "Strategy",
+      "Turn-Based Strategy",
+      "Real-Time with Pause",
+      "Fantasy"
+    ],
+    "price": 5999,
+    "discountPct": 60,
+    "reviewSummary": "Mostly Positive",
+    "reviewCount": 92113,
+    "screenshotIds": [
+      "6149b0570c42cda0e40b4de71e6f48bbe5c4c577",
+      "320f5373c16e33f50c0ee2ccc822344c0e0d5f8d",
+      "4afac709f1bfe992122e315852cf6ea2f58b28ba",
+      "086d9d777d14d64c9e8bc1713b088381033dfeeb"
+    ],
+    "platforms": [
+      "windows",
+      "mac"
+    ],
+    "releaseDate": "2022-02-17"
+  },
+  {
+    "appid": 105600,
+    "name": "Terraria",
+    "tags": [
+      "Sandbox",
+      "2D",
+      "Crafting",
+      "Co-op"
+    ],
+    "price": 999,
+    "reviewSummary": "Overwhelmingly Positive",
+    "reviewCount": 1185402,
+    "screenshotIds": [
+      "8c03886f214d2108cafca13845533eaa3d87d83f",
+      "ae168a00ab08104ba266dc30232654d4b3c919e5",
+      "9edd98caaf9357c2f40758f354475a56e356e8b0",
+      "75ea9a7e39eb34b40efa1e6dfd2536098dc4734b"
+    ],
+    "platforms": [
+      "windows",
+      "mac",
+      "linux"
+    ],
+    "releaseDate": "2011-05-16"
+  },
+  {
+    "appid": 1321440,
+    "name": "Cassette Beasts",
+    "tags": [
+      "Monster Tamer",
+      "Pixel Graphics",
+      "Turn-Based Combat",
+      "RPG"
+    ],
+    "price": 1999,
+    "discountPct": 20,
+    "reviewSummary": "Very Positive",
+    "reviewCount": 11203,
+    "screenshotIds": [
+      "8c6d904950b675f8cb2e0255a1f5b06d7898bc5b",
+      "580f8e3d83ab9357cface16e0272eb541f51984e",
+      "aaa30fb9959b16d8026ac1e83a3bb0e8c591ed8b",
+      "4b4231e199091054d443b319f97811646fbab9d4"
+    ],
+    "platforms": [
+      "windows",
+      "mac",
+      "linux"
+    ],
+    "releaseDate": "2023-04-26"
+  },
+  {
+    "appid": 646570,
+    "name": "Slay the Spire",
+    "tags": [
+      "Roguelike",
+      "Card Game",
+      "Deckbuilding",
+      "Turn-Based"
+    ],
+    "price": 2499,
+    "reviewSummary": "Overwhelmingly Positive",
+    "reviewCount": 211348,
+    "screenshotIds": [
+      "c171816f7ecd35b5b46d2fa27532f4c5b8ca3cc5",
+      "01aa3e7759e457bfbf2422f31c325d7b3ba8a6eb",
+      "b757436d08ba08292796bfed9c60e7cc99d5f2c3",
+      "1299d7fe55771cf564848c5046fbef7936178440"
+    ],
+    "platforms": [
+      "windows",
+      "mac",
+      "linux"
+    ],
+    "releaseDate": "2019-01-23"
+  },
+  {
+    "appid": 367520,
+    "name": "Hollow Knight",
+    "tags": [
+      "Metroidvania",
+      "Difficult",
+      "2D",
+      "Atmospheric"
+    ],
+    "price": 1499,
+    "reviewSummary": "Overwhelmingly Positive",
+    "reviewCount": 651298,
+    "screenshotIds": [
+      "5384f9f8b96a0b9934b2bc35a4058376211636d2",
+      "d5b6edd94e77ba6db31c44d8a3c09d807ab27751",
+      "a81e4231cc8d55f58b51a4a938898af46503cae5",
+      "62e10cf506d461e11e050457b08aa0e2a1c078d0"
+    ],
+    "platforms": [
+      "windows",
+      "mac",
+      "linux"
+    ],
+    "releaseDate": "2017-02-24"
+  },
+  {
+    "appid": 1562430,
+    "name": "DREDGE",
+    "tags": [
+      "Fishing",
+      "Lovecraftian",
+      "Cozy",
+      "Atmospheric"
+    ],
+    "price": 2499,
+    "discountPct": 30,
+    "reviewSummary": "Very Positive",
+    "reviewCount": 47120,
+    "screenshotIds": [
+      "70f88014423ed93eaa111c0d0daca2c500f76908",
+      "d4d4b14c5cd071307e27b4e9737f23f28b096248",
+      "9529104cde1af2ffbb715cab42bbb3012fb9b7d8",
+      "b60f2ff50997c5da29fcd783770053263aac26c0"
+    ],
+    "platforms": [
+      "windows",
+      "mac"
+    ],
+    "releaseDate": "2023-03-30"
+  },
+  {
+    "appid": 1817230,
+    "name": "Hi-Fi RUSH",
+    "tags": [
+      "Action",
+      "Rhythm",
+      "Stylized",
+      "Combat"
+    ],
+    "price": 2999,
+    "discountPct": 50,
+    "reviewSummary": "Overwhelmingly Positive",
+    "reviewCount": 30482,
+    "screenshotIds": [
+      "382e9d5abb00498eee6a86b0366a2db7826268b7",
+      "8a13650ffe930da77593dae80f0118588c46a5ca",
+      "62a7ff68fff7850be6a0784eff41edafd33b2099",
+      "7dfaee4616fbed65b2b0fcb82d55dc0a957fd8a5"
+    ],
+    "platforms": [
+      "windows"
+    ],
+    "releaseDate": "2023-01-25"
+  }
+]

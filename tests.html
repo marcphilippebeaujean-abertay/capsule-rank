@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>capsule-rank tests</title>
+  <style>
+    body { font: 14px/1.4 system-ui, Arial, sans-serif; padding: 1rem; max-width: 800px; }
+    .pass { color: #2a7a2a; }
+    .fail { color: #b00020; }
+    h1 { margin: 0 0 1rem; }
+    h2 { margin-top: 1rem; }
+    div { margin: .15rem 0; }
+  </style>
+</head>
+<body>
+  <h1>capsule-rank tests</h1>
+  <div id="results"></div>
+  <script src="app.js"></script>
+  <script>
+    const results = document.getElementById('results');
+    let passed = 0, failed = 0;
+
+    function assert(name, cond, detail) {
+      const div = document.createElement('div');
+      div.className = cond ? 'pass' : 'fail';
+      div.textContent = (cond ? 'PASS  ' : 'FAIL  ') + name + (cond ? '' : '  — ' + (detail ?? ''));
+      results.appendChild(div);
+      cond ? passed++ : failed++;
+    }
+    function eq(name, actual, expected) {
+      const a = JSON.stringify(actual), e = JSON.stringify(expected);
+      assert(name, a === e, `expected ${e}, got ${a}`);
+    }
+
+    window.addEventListener('load', () => {
+      // classifyAspectRatio
+      eq('aspect ok at 460x215', classifyAspectRatio(460, 215), 'ok');
+      eq('aspect ok at 920x430 (same ratio)', classifyAspectRatio(920, 430), 'ok');
+      eq('aspect warn at 480x215 (~+4% off)', classifyAspectRatio(480, 215), 'warn');
+      eq('aspect reject at 600x900 (portrait)', classifyAspectRatio(600, 900), 'reject');
+      eq('aspect reject at 460x460 (square)', classifyAspectRatio(460, 460), 'reject');
+      eq('aspect ok within ±2%', classifyAspectRatio(460, 218), 'ok');
+
+      // sampleGames
+      const pool = [{a:1},{a:2},{a:3},{a:4},{a:5}];
+      const s3 = sampleGames(pool, 3);
+      assert('sample returns N entries', s3.length === 3);
+      assert('sample returns distinct entries', new Set(s3).size === 3);
+      assert('sample entries come from pool', s3.every(x => pool.includes(x)));
+      const sAll = sampleGames(pool, 10);
+      assert('sample of N>pool returns pool size', sAll.length === pool.length);
+      const s0 = sampleGames(pool, 0);
+      assert('sample of 0 returns empty array', Array.isArray(s0) && s0.length === 0);
+      const empty = sampleGames([], 3);
+      assert('sample of empty pool returns empty array', Array.isArray(empty) && empty.length === 0);
+
+      // formatPrice
+      eq('price no discount', formatPrice(1199, 0), { final: '$11.99', original: null, discountLabel: null });
+      eq('price with discount', formatPrice(1499, 35), { final: '$9.74', original: '$14.99', discountLabel: '-35%' });
+      eq('price free', formatPrice(0, 0), { final: 'Free', original: null, discountLabel: null });
+
+      // formatReleaseDate
+      eq('date format', formatReleaseDate('2026-05-04'), '4 May, 2026');
+      eq('date format Jan', formatReleaseDate('2026-01-09'), '9 Jan, 2026');
+      eq('date format invalid', formatReleaseDate(''), '');
+
+      // randomTags
+      const games = [{ tags: ['A','B'] }, { tags: ['B','C'] }, { tags: ['D'] }];
+      const tags = randomTags(games, 3);
+      assert('randomTags returns N', tags.length === 3);
+      assert('randomTags returns distinct', new Set(tags).size === 3);
+      const allowed = new Set(['A','B','C','D']);
+      assert('randomTags entries from union', tags.every(t => allowed.has(t)));
+      const tooMany = randomTags(games, 99);
+      assert('randomTags clamps to pool', tooMany.length === 4);
+
+      const summary = document.createElement('h2');
+      summary.textContent = `${passed} passed, ${failed} failed`;
+      summary.className = failed ? 'fail' : 'pass';
+      results.appendChild(summary);
+    });
+  </script>
+</body>
+</html>

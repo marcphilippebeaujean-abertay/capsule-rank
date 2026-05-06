@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>capsule-rank</title>
+  <script defer src="app.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.10/dist/cdn.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Motiva Sans", system-ui, Arial, sans-serif; background: #1b2838; color: #c7d5e0; }
+    .topbar, .editor, .grid-section { max-width: 1000px; margin-left: auto; margin-right: auto; }
+    h1, h2, h3 { font-weight: 400; }
+    a, .link { color: #66c0f4; }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+    .topbar { padding: 1.5rem 2rem .5rem; }
+    .topbar h1 { margin: 0; color: white; font-size: 28px; }
+    .tagline { color: #8f98a0; margin: .25rem 0 0; }
+
+    /* ===== Editor ===== */
+    .editor { display: grid; grid-template-columns: minmax(320px, auto) 1fr; gap: 2rem; padding: 1rem 2rem; }
+    .editor-visuals { display: flex; flex-direction: column; gap: 1rem; }
+    .capsule-preview { display: block; width: 460px; max-width: 100%; aspect-ratio: 460 / 215; background: #2a3f5a; border: 1px solid #4a6a8a; border-radius: 4px; overflow: hidden; position: relative; cursor: pointer; }
+    .capsule-preview:hover { border-color: #66c0f4; }
+    .capsule-preview.has-image { border-color: #66c0f4; }
+    .capsule-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .capsule-preview .placeholder { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: #8f98a0; padding: 1rem; line-height: 1.4; }
+    .preview-actions { position: absolute; top: 6px; right: 6px; display: flex; gap: 4px; }
+    .icon-btn { background: rgba(0,0,0,.6); border: 0; color: white; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: grid; place-items: center; padding: 0; transition: background 100ms linear; }
+    .icon-btn:hover { background: rgba(0,0,0,.85); color: #66c0f4; }
+    .icon-btn svg { width: 14px; height: 14px; display: block; }
+    .capsule-library { display: flex; gap: .35rem; max-width: 460px; overflow-x: auto; padding: .35rem 0; scrollbar-width: thin; }
+    .capsule-thumb { position: relative; flex: 0 0 auto; width: 92px; aspect-ratio: 460 / 215; background: #2a3f5a; border: 2px solid transparent; border-radius: 3px; overflow: hidden; cursor: pointer; }
+    .capsule-thumb.active { border-color: #66c0f4; }
+    .capsule-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+    .capsule-thumb .remove-x { position: absolute; top: 1px; right: 1px; background: rgba(0,0,0,.7); color: white; border: 0; width: 18px; height: 18px; border-radius: 50%; cursor: pointer; line-height: 1; font-size: 13px; opacity: 0; transition: opacity 100ms linear; }
+    .capsule-thumb:hover .remove-x { opacity: 1; }
+    .capsule-thumb.add-thumb { border: 2px dashed #4a6a8a; display: grid; place-items: center; cursor: pointer; }
+    .capsule-thumb.add-thumb span { color: #8f98a0; font-size: 22px; line-height: 1; }
+    .capsule-thumb.add-thumb:hover { border-color: #66c0f4; }
+    .warn-severe { color: #e35b5b; margin: .25rem 0; }
+    .screenshot-slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: .5rem; max-width: 460px; }
+    .screenshot-slot { position: relative; aspect-ratio: 16 / 9; background: #2a3f5a; border: 1px dashed #4a6a8a; border-radius: 3px; overflow: hidden; cursor: pointer; display: grid; place-items: center; }
+    .screenshot-slot.has-image { border-style: solid; border-color: #66c0f4; }
+    .screenshot-slot img { width: 100%; height: 100%; object-fit: cover; }
+    .screenshot-slot .placeholder { color: #8f98a0; font-size: 12px; }
+    .screenshot-slot .remove-x { position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,.6); color: white; border: 0; width: 20px; height: 20px; border-radius: 50%; cursor: pointer; line-height: 1; }
+
+    .editor-fields .field { display: block; margin-bottom: .85rem; }
+    .editor-fields .field > span { display: block; font-size: 12px; color: #8f98a0; margin-bottom: .25rem; }
+    .editor-fields input[type="text"],
+    .editor-fields input[type="number"],
+    .editor-fields input[type="date"],
+    .editor-fields select {
+      background: #2a3f5a; color: #c7d5e0; border: 1px solid #4a6a8a; border-radius: 3px;
+      padding: .4rem .55rem; width: 100%; max-width: 320px; font: inherit;
+    }
+    .editor-fields .tag-input {
+      display: flex; flex-wrap: wrap; gap: .35rem; padding: .4rem;
+      background: #2a3f5a; border: 1px solid #4a6a8a; border-radius: 3px; max-width: 460px;
+    }
+    .editor-fields .tag-input input { background: transparent; border: 0; flex: 1; min-width: 8rem; color: inherit; padding: .15rem .25rem; outline: none; }
+    .tag-pill { display: inline-flex; align-items: center; gap: .25rem; background: #4a6a8a; color: #c7d5e0; border-radius: 2px; padding: .15rem .4rem; font-size: 12px; }
+    .tag-pill button { background: transparent; border: 0; color: inherit; cursor: pointer; padding: 0; line-height: 1; font-size: 14px; }
+    details.advanced { margin-top: 1rem; }
+    details.advanced summary { cursor: pointer; color: #66c0f4; font-weight: 600; padding: .35rem 0; user-select: none; }
+    details.advanced[open] summary { margin-bottom: .5rem; }
+    .platforms-row label { display: inline-flex; align-items: center; gap: .25rem; margin-right: .75rem; font-size: 13px; }
+    .clear-link { display: block; margin-top: 1rem; }
+
+    /* ===== Grid ===== */
+    .grid-section { padding: 1rem 2rem 4rem; }
+    .grid-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-bottom: .75rem; }
+    .grid-header h2 { color: white; margin: 0; font-size: 18px; text-transform: uppercase; letter-spacing: .05em; }
+    .refresh-btn { background: linear-gradient(to bottom, #67c1f5, #417a9b); color: white; border: 0; padding: .5rem 1.25rem; border-radius: 2px; cursor: pointer; font: inherit; }
+    .refresh-btn:hover { background: linear-gradient(to bottom, #7cd1ff, #4f8aae); }
+    .empty-prompt { color: #8f98a0; padding: .5rem 0; }
+    .grid-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: .75rem; align-items: start; }
+    .grid-rows { list-style: none; margin: 0; padding: 0; }
+    .row {
+      display: grid;
+      grid-template-columns: 140px minmax(0, 1fr) auto auto auto;
+      gap: .65rem;
+      align-items: center;
+      padding: .5rem;
+      background: linear-gradient(to right, #16202d, #1b2838);
+      border-bottom: 1px solid #0f1822;
+      cursor: pointer;
+      transition: background 80ms linear;
+    }
+    .row.active { background: linear-gradient(to right, #4f87b8 0%, #5d9ac8 100%); }
+    .row.active .row-name { color: white; }
+    .row.active .row-tags, .row.active .row-date { color: rgba(27, 40, 56, .85); }
+    .row-capsule { width: 140px; aspect-ratio: 460 / 215; overflow: hidden; background: #0e141b; }
+    .row-capsule img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .row-meta { min-width: 0; }
+    .row-name { color: #c7d5e0; font-size: 17px; line-height: 1.2; margin-bottom: .25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row-platforms { display: flex; gap: .25rem; margin-bottom: .25rem; }
+    .plat { display: inline-block; width: 14px; height: 14px; background: rgba(255,255,255,.2); border-radius: 2px; }
+    .plat.win { background-image: linear-gradient(135deg, #6b7d8d 25%, #4a5868 75%); }
+    .plat.mac { background-image: radial-gradient(circle at 35% 35%, #b1bcc6 0%, #6b7d8d 70%); border-radius: 50%; }
+    .plat.linux { background-image: linear-gradient(135deg, #a08d6a 25%, #6f5e3a 75%); }
+    .row-tags { color: #8f98a0; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 360px; }
+    .row-price-block { display: flex; align-items: stretch; gap: 0; }
+    .discount-badge {
+      background: #4c6b22; color: #beee11; font-weight: bold;
+      padding: .35rem .55rem; border-radius: 2px 0 0 2px; font-size: 14px;
+      display: flex; align-items: center;
+    }
+    .price-stack { background: rgba(0,0,0,.2); padding: .25rem .55rem; min-width: 70px; text-align: right; border-radius: 0 2px 2px 0; }
+    .price-stack.no-discount { background: transparent; padding-right: 0; }
+    .price-original { color: #738895; font-size: 11px; text-decoration: line-through; line-height: 1.1; }
+    .price-final { color: white; font-size: 13px; line-height: 1.1; }
+    .price-final.is-discounted { color: #beee11; }
+    .row-date { color: #8f98a0; font-size: 12px; min-width: 80px; text-align: right; padding-right: .35rem; }
+
+    /* ===== Sidebar ===== */
+    .sidebar {
+      background: linear-gradient(to bottom, #c4dbed 0%, #b6d2eb 100%);
+      padding: 1rem; min-height: 500px; color: #1b2838;
+    }
+    .sidebar-name { margin: 0 0 .75rem; color: #1b2838; font-size: 22px; font-weight: 400; }
+    .review-block { background: #4f87b8; padding: .5rem .75rem; border-radius: 2px; margin-bottom: .75rem; }
+    .review-header { color: white; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; opacity: .85; margin-bottom: .15rem; }
+    .review-summary { font-size: 13px; }
+    .review-label { color: #66c0f4; font-weight: 600; }
+    .review-count { color: white; margin-left: .35rem; opacity: .85; }
+    .sidebar-tags { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .85rem; }
+    .sidebar-tag-pill { background: rgba(103, 193, 245, .35); color: #1b2838; border-radius: 2px; padding: .15rem .55rem; font-size: 12px; }
+    .sidebar-screenshots { display: flex; flex-direction: column; gap: .5rem; }
+    .sidebar-screenshots img { width: 100%; height: auto; display: block; border-radius: 2px; background: #0e141b; }
+    .no-shots { color: rgba(27, 40, 56, .65); font-style: italic; }
+
+    /* ===== Crop modal ===== */
+    [x-cloak] { display: none !important; }
+    .crop-modal { position: fixed; inset: 0; background: rgba(0,0,0,.85); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .crop-modal-inner { display: flex; flex-direction: column; align-items: center; }
+    .crop-hint { color: #c7d5e0; margin: 0 0 .75rem; font-size: 13px; }
+    .crop-stage { width: 460px; height: 215px; max-width: 100%; background: #000; overflow: hidden; position: relative; cursor: grab; touch-action: none; border: 1px solid #66c0f4; }
+    .crop-stage:active { cursor: grabbing; }
+    .crop-stage img { position: absolute; top: 0; left: 0; user-select: none; -webkit-user-drag: none; pointer-events: none; max-width: none; }
+    .crop-actions { display: flex; gap: .75rem; margin-top: 1rem; }
+    .crop-actions button { padding: .5rem 1.25rem; background: #2a475e; border: 1px solid #4a6a8a; color: #c7d5e0; border-radius: 3px; cursor: pointer; font: inherit; }
+    .crop-actions button.primary { background: linear-gradient(to bottom, #67c1f5, #417a9b); color: white; border: 0; }
+    .crop-actions button.primary:hover { background: linear-gradient(to bottom, #7cd1ff, #4f8aae); }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 900px) {
+      .editor { grid-template-columns: 1fr; padding: 1rem; gap: 1rem; }
+      .grid-section { padding: 1rem; }
+      .grid-layout { grid-template-columns: 1fr; }
+      .row {
+        grid-template-columns: 130px 1fr;
+        grid-template-rows: auto auto auto;
+        gap: .35rem .75rem;
+      }
+      .row-capsule { width: 130px; grid-row: span 3; }
+      .row-meta { grid-column: 2; }
+      .row-price-block { grid-column: 2; justify-self: start; }
+      .row-date { grid-column: 2; text-align: left; font-size: 11px; padding: 0; }
+      .sidebar { margin-top: 1rem; min-height: 0; }
+    }
+  </style>
+</head>
+<body x-data="capsuleRankApp" x-init="init()">
+  <header class="topbar">
+    <h1>capsule-rank</h1>
+    <p class="tagline">Drop your Steam header capsule into a New &amp; Trending mock and see if it stands out.</p>
+  </header>
+
+  <section class="editor" aria-label="Editor">
+    <div class="editor-visuals">
+      <label class="capsule-preview" :class="{ 'has-image': userGame.capsule }" title="Click to upload a new capsule">
+        <template x-if="userGame.capsule">
+          <img :src="userGame.capsule" alt="Active capsule">
+        </template>
+        <template x-if="!userGame.capsule">
+          <span class="placeholder">No capsule selected<br><small>Click to upload</small></span>
+        </template>
+        <input type="file" accept="image/*" class="visually-hidden" @change="onCapsuleSelected($event)">
+        <template x-if="userGame.capsule">
+          <div class="preview-actions">
+            <button type="button" class="icon-btn" @click.prevent.stop="recropActive()" aria-label="Re-crop" title="Re-crop">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 1v11h11"/>
+                <path d="M1 4h11v11"/>
+              </svg>
+            </button>
+            <button type="button" class="icon-btn" @click.prevent.stop="clearCapsule()" aria-label="Deselect" title="Deselect">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+                <path d="M3 3l10 10M13 3L3 13"/>
+              </svg>
+            </button>
+          </div>
+        </template>
+      </label>
+
+      <div class="capsule-library">
+        <label class="capsule-thumb add-thumb" title="Upload a new capsule">
+          <span>+</span>
+          <input type="file" accept="image/*" class="visually-hidden" @change="onCapsuleSelected($event)">
+        </label>
+        <template x-for="cap in capsuleLibrary" :key="cap.id">
+          <div class="capsule-thumb"
+               :class="{ active: userGame.activeCapsuleId === cap.id }"
+               @click="selectCapsule(cap)"
+               title="Click to select; hover × to delete">
+            <img :src="cap.dataUrl" alt="">
+            <button type="button" class="remove-x" @click.stop="deleteCapsule(cap)" aria-label="Delete capsule">×</button>
+          </div>
+        </template>
+      </div>
+
+    </div>
+
+    <div class="editor-fields">
+      <label class="field">
+        <span>Game name</span>
+        <input type="text" x-model="userGame.name" placeholder="My Game">
+      </label>
+
+      <details class="advanced">
+        <summary>Advanced</summary>
+
+        <div class="field">
+          <span>Screenshots (up to 4)</span>
+          <div class="screenshot-slots">
+            <template x-for="i in 4" :key="i">
+              <label class="screenshot-slot" :class="{ 'has-image': userGame.screenshots[i-1] }">
+                <template x-if="userGame.screenshots[i-1]">
+                  <img :src="userGame.screenshots[i-1]" alt="">
+                </template>
+                <template x-if="!userGame.screenshots[i-1]">
+                  <span class="placeholder">+ add</span>
+                </template>
+                <input type="file" accept="image/*" class="visually-hidden" @change="onScreenshotSelected($event, i-1)">
+                <button type="button" class="remove-x" x-show="userGame.screenshots[i-1]" @click.prevent="removeScreenshot(i-1)" aria-label="Remove screenshot">×</button>
+              </label>
+            </template>
+          </div>
+        </div>
+
+        <div class="field">
+          <span>Tags</span>
+          <div class="tag-input">
+            <template x-for="tag in userGame.tags" :key="tag">
+              <span class="tag-pill">
+                <span x-text="tag"></span>
+                <button type="button" @click="removeTag(tag)" aria-label="Remove tag">×</button>
+              </span>
+            </template>
+            <input type="text"
+                   placeholder="Type a tag, press Enter"
+                   @keydown.enter.prevent="addTag($event.target.value); $event.target.value = ''">
+          </div>
+        </div>
+
+        <label class="field">
+          <span>Price (USD)</span>
+          <input type="number" min="0" step="0.01"
+                 :value="(userGame.price / 100).toFixed(2)"
+                 @input="userGame.price = Math.round(parseFloat($event.target.value || 0) * 100)">
+        </label>
+
+        <label class="field">
+          <span>Discount %</span>
+          <input type="number" min="0" max="95" step="1" x-model.number="userGame.discountPct">
+        </label>
+
+        <label class="field">
+          <span>Review summary</span>
+          <select x-model="userGame.reviewSummary">
+            <option>Overwhelmingly Positive</option>
+            <option>Very Positive</option>
+            <option>Positive</option>
+            <option>Mostly Positive</option>
+            <option>Mixed</option>
+            <option>Mostly Negative</option>
+            <option>Negative</option>
+            <option>Very Negative</option>
+            <option>Overwhelmingly Negative</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Review count</span>
+          <input type="number" min="0" step="1" x-model.number="userGame.reviewCount">
+        </label>
+
+        <div class="field platforms-row">
+          <span>Platforms</span>
+          <label><input type="checkbox" :checked="userGame.platforms.includes('windows')" @change="togglePlatform('windows')"> Windows</label>
+          <label><input type="checkbox" :checked="userGame.platforms.includes('mac')" @change="togglePlatform('mac')"> Mac</label>
+          <label><input type="checkbox" :checked="userGame.platforms.includes('linux')" @change="togglePlatform('linux')"> Linux</label>
+        </div>
+
+        <label class="field">
+          <span>Release date</span>
+          <input type="date" x-model="userGame.releaseDate">
+        </label>
+      </details>
+
+      <p class="warn-severe" x-show="storageWarning" x-text="storageWarning"></p>
+
+      <button type="button" class="link clear-link" @click="if (confirm('Clear all editor data?')) clearAll()">Clear</button>
+    </div>
+  </section>
+
+  <section class="grid-section" aria-label="Grid">
+    <div class="grid-header">
+      <h2>New &amp; Trending</h2>
+      <button type="button" class="refresh-btn" @click="refresh()">Refresh</button>
+    </div>
+    <p class="warn-severe" x-show="loadError" x-text="loadError"></p>
+    <p class="empty-prompt" x-show="!userGame.capsule && !loadError">Upload a capsule above to drop yours in.</p>
+
+    <div class="grid-layout">
+      <ol class="grid-rows">
+        <template x-for="row in displayedRows" :key="row.key">
+          <li class="row"
+              :class="{ active: activeRowKey === row.key }"
+              @mouseenter="activeRowKey = row.key"
+              @click="activeRowKey = row.key">
+            <div class="row-capsule">
+              <img :src="capsuleUrl(row)" alt="" loading="lazy" @error="onCapsuleImageError(row)">
+            </div>
+            <div class="row-meta">
+              <div class="row-name" x-text="row.name"></div>
+              <div class="row-platforms">
+                <template x-if="row.platforms?.includes('windows')"><span class="plat win" title="Windows"></span></template>
+                <template x-if="row.platforms?.includes('mac')"><span class="plat mac" title="Mac"></span></template>
+                <template x-if="row.platforms?.includes('linux')"><span class="plat linux" title="Linux"></span></template>
+              </div>
+              <div class="row-tags" x-text="(row.tags || []).join(', ')"></div>
+            </div>
+            <template x-if="priceFor(row).discountLabel">
+              <span class="discount-badge" x-text="priceFor(row).discountLabel"></span>
+            </template>
+            <div class="price-stack" :class="{ 'no-discount': !priceFor(row).discountLabel }">
+              <template x-if="priceFor(row).original">
+                <div class="price-original" x-text="priceFor(row).original"></div>
+              </template>
+              <div class="price-final" :class="{ 'is-discounted': priceFor(row).discountLabel }" x-text="priceFor(row).final"></div>
+            </div>
+            <div class="row-date" x-text="dateFor(row)"></div>
+          </li>
+        </template>
+      </ol>
+
+      <aside class="sidebar">
+        <template x-if="activeRow">
+          <div>
+            <h3 class="sidebar-name" x-text="activeRow.name || 'Untitled'"></h3>
+            <div class="review-block">
+              <div class="review-header">English Reviews</div>
+              <div class="review-summary">
+                <span class="review-label" x-text="activeRow.reviewSummary"></span>
+                <span class="review-count" x-text="'(' + (activeRow.reviewCount || 0).toLocaleString() + ')'"></span>
+              </div>
+            </div>
+            <div class="sidebar-tags">
+              <template x-for="tag in activeRow.tags || []" :key="tag">
+                <span class="sidebar-tag-pill" x-text="tag"></span>
+              </template>
+            </div>
+            <div class="sidebar-screenshots">
+              <template x-if="screenshotsFor(activeRow).length === 0">
+                <p class="no-shots">No screenshots available.</p>
+              </template>
+              <template x-for="shot in screenshotsFor(activeRow)" :key="shot.key">
+                <img :src="shot.src" alt="" loading="lazy" @error="$event.target.style.display='none'">
+              </template>
+            </div>
+          </div>
+        </template>
+      </aside>
+    </div>
+  </section>
+
+  <div class="crop-modal" x-show="cropping" x-cloak>
+    <div class="crop-modal-inner">
+      <p class="crop-hint">Drag the image to choose what shows in the 460 × 215 capsule.</p>
+      <div class="crop-stage"
+           @pointerdown.prevent="startCrop($event)"
+           @pointermove="dragCrop($event)"
+           @pointerup="endCrop()"
+           @pointercancel="endCrop()"
+           @pointerleave="endCrop()">
+        <img :src="cropSourceUrl"
+             :style="`transform: translate(${cropOffsetX}px, ${cropOffsetY}px); width: ${cropDisplayW}px; height: ${cropDisplayH}px;`"
+             draggable="false" alt="">
+      </div>
+      <div class="crop-actions">
+        <button type="button" @click="cancelCrop()">Cancel</button>
+        <button type="button" class="primary" @click="applyCrop()">Use this crop</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
