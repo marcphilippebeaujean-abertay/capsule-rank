@@ -5,9 +5,10 @@ docs/
 node_modules/
 package-lock.json
 
-# Debug artifacts from debug.mjs
+# Debug artifacts from debug.mjs and ad-hoc Playwright probes
 debug.png
 debug-*.png
+rate-*.png
 
 # OS
 .DS_Store
