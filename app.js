@@ -227,6 +227,7 @@ function capsuleRankApp() {
     cropOffsetY: 0,
     cropDragStart: null,
     cropEditingId: null,         // when set, applyCrop updates that library record instead of creating a new one
+    dragActive: false,           // true while a file is being dragged over the capsule preview
 
     async init() {
       this.hydrate();
@@ -356,17 +357,14 @@ function capsuleRankApp() {
       return ids.map((id, i) => ({ key: row.key + '-ss-' + i, src: screenshotUrl(row, id) }));
     },
 
-    async onCapsuleSelected(event) {
-      const file = event.target.files?.[0];
-      event.target.value = '';
-      if (!file) return;
+    async loadCapsuleFile(file) {
+      if (!file || !file.type?.startsWith('image/')) return;
       try {
         const dataUrl = await readFileAsDataURL(file);
         const { width, height } = await imageDimensions(dataUrl);
         this.cropSourceUrl = dataUrl;
         this.cropSourceW = width;
         this.cropSourceH = height;
-        // Center the image in the viewport at fit-to-cover scale.
         const slack = this.cropSlack(width, height);
         this.cropOffsetX = -slack.x / 2;
         this.cropOffsetY = -slack.y / 2;
@@ -374,6 +372,18 @@ function capsuleRankApp() {
       } catch (e) {
         console.warn('invalid capsule upload:', e);
       }
+    },
+
+    async onCapsuleSelected(event) {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      await this.loadCapsuleFile(file);
+    },
+
+    async onCapsuleDropped(event) {
+      this.dragActive = false;
+      const file = event.dataTransfer?.files?.[0];
+      await this.loadCapsuleFile(file);
     },
 
     // Internal helper: returns { displayW, displayH, scale, x: slackX, y: slackY } for given source dims.
