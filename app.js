@@ -233,6 +233,7 @@ function capsuleRankApp() {
       this.hydrate();
       this.installPersister();
       this.installMobileWatcher();
+      this.installPasteHandler();
       try {
         const records = await dbAllCapsules();
         this.capsuleLibrary = records.sort((a, b) => b.createdAt - a.createdAt);
@@ -262,6 +263,23 @@ function capsuleRankApp() {
         if (e.target.closest('.sidebar')) return;
         if (e.target.closest('.row')) return;
         this.mobileSidebarOpen = false;
+      });
+    },
+
+    installPasteHandler() {
+      document.addEventListener('paste', (e) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (const item of items) {
+          if (item.kind === 'file' && item.type.startsWith('image/')) {
+            const file = item.getAsFile();
+            if (!file) continue;
+            e.preventDefault();
+            this.cropEditingId = null;
+            this.loadCapsuleFile(file);
+            return;
+          }
+        }
       });
     },
 
