@@ -6,6 +6,34 @@
 const STEAM_HEADER_RATIO = 460 / 215; // ≈ 2.1395
 const STORAGE_KEY = 'capsuleRank.userGame';
 
+// Steam proxy lives on the kings-path-save-system Firebase project's hosting
+// rewrites — see kings-path-server/firebase.json. Override with
+// `localStorage.setItem('capsuleRank.steamApi', 'http://localhost:5002')` for
+// local-emulator development.
+const STEAM_API_DEFAULT = 'https://kings-path-save-system.web.app';
+
+function steamApiBase() {
+  try { return localStorage.getItem('capsuleRank.steamApi') || STEAM_API_DEFAULT; }
+  catch { return STEAM_API_DEFAULT; }
+}
+
+async function steamSearch(query) {
+  const q = (query || '').trim();
+  if (!q) return { items: [] };
+  const url = `${steamApiBase()}/steam/search?q=${encodeURIComponent(q)}`;
+  const r = await fetch(url, { headers: { 'accept': 'application/json' } });
+  if (!r.ok) throw new Error(`steamSearch HTTP ${r.status}`);
+  return r.json();
+}
+
+async function steamDetails(appid) {
+  if (!Number.isInteger(appid) || appid <= 0) throw new Error('invalid appid');
+  const url = `${steamApiBase()}/steam/details?appid=${appid}`;
+  const r = await fetch(url, { headers: { 'accept': 'application/json' } });
+  if (!r.ok) throw new Error(`steamDetails HTTP ${r.status}`);
+  return r.json();
+}
+
 function classifyAspectRatio(width, height) {
   if (!width || !height) return 'reject';
   const ratio = width / height;
