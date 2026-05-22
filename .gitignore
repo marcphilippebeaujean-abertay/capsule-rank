@@ -5,6 +5,9 @@ docs/
 node_modules/
 package-lock.json
 
+# Build output (Actions publishes this to Pages on push)
+dist/
+
 # Debug artifacts from debug.mjs and ad-hoc Playwright probes
 debug.png
 debug-*.png

@@ -22,6 +22,29 @@ Open `tests.html` in a browser. Assertions for the pure helpers
 (`classifyAspectRatio`, `sampleGames`, `formatPrice`, `formatReleaseDate`,
 `randomTags`) run on page load.
 
+Headless from the command line:
+
+```bash
+npm test            # spins up a loopback server + headless Chromium
+```
+
+## Pre-commit gate
+
+`npm install` wires a husky pre-commit hook that runs ESLint and `tests.html`
+headlessly before every commit. To bypass once (not recommended): `git commit
+--no-verify`.
+
+## Build / deploy
+
+The site is served as-is from the repo for local dev. On push to `main`,
+`.github/workflows/deploy.yml` runs `npm run build` (esbuild minifies `app.js`,
+html-minifier-terser collapses `index.html`) and publishes `dist/` to GitHub
+Pages.
+
+```bash
+npm run build       # writes dist/ locally
+```
+
 ## Adding games to `games.json`
 
 Each entry needs:

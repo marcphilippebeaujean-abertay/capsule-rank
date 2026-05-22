@@ -104,8 +104,15 @@
     .row-name { color: #c7d5e0; font-size: 17px; line-height: 1.2; margin-bottom: .25rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .row-platforms { display: flex; gap: .25rem; margin-bottom: .25rem; }
     .plat { display: inline-block; width: 14px; height: 14px; background: rgba(255,255,255,.2); border-radius: 2px; }
-    .plat.win { background-image: linear-gradient(135deg, #6b7d8d 25%, #4a5868 75%); }
-    .plat.mac { background-image: radial-gradient(circle at 35% 35%, #b1bcc6 0%, #6b7d8d 70%); border-radius: 50%; }
+    .plat.win, .plat.mac {
+      background: center/contain no-repeat;
+      border-radius: 0;
+      /* Source PNGs are pure black; tint to a neutral gray that reads on both
+         the dark default row and the lighter active-row gradient. */
+      filter: invert(72%);
+    }
+    .plat.win { background-image: url("windows.png"); }
+    .plat.mac { background-image: url("mac.png"); }
     .plat.linux { background-image: linear-gradient(135deg, #a08d6a 25%, #6f5e3a 75%); }
     .row-tags { color: #8f98a0; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 360px; }
     .row-price-block { display: flex; align-items: stretch; gap: 0; }
