@@ -113,7 +113,6 @@
     }
     .plat.win { background-image: url("windows.png"); }
     .plat.mac { background-image: url("mac.png"); }
-    .plat.linux { background-image: linear-gradient(135deg, #a08d6a 25%, #6f5e3a 75%); }
     .row-tags { color: #8f98a0; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 360px; }
     .row-price-block { display: flex; align-items: stretch; gap: 0; }
     .discount-badge {
@@ -222,7 +221,9 @@
     .search-empty, .search-message { padding: .65rem 1rem; color: #8f98a0; font-size: 13px; }
     .search-message.error { color: #ff7878; }
 
-    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255, 255, 255, .15); border-top-color: #67c1f5; border-radius: 50%; animation: spin .8s linear infinite; }
+    .spinner { display: inline-block; width: 14px; height: 14px; color: #67c1f5; animation: spin .8s linear infinite; }
+    .spinner circle { opacity: .25; }
+    .spinner .spinner-arc { opacity: 1; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .search-loading { display: flex; align-items: center; gap: .5rem; padding: .65rem 1rem; color: #8f98a0; font-size: 13px; }
 
@@ -437,7 +438,6 @@
               <div class="row-platforms">
                 <template x-if="row.platforms?.includes('windows')"><span class="plat win" title="Windows"></span></template>
                 <template x-if="row.platforms?.includes('mac')"><span class="plat mac" title="Mac"></span></template>
-                <template x-if="row.platforms?.includes('linux')"><span class="plat linux" title="Linux"></span></template>
               </div>
               <div class="row-tags" x-text="(row.tags || []).join(', ')"></div>
             </div>
@@ -545,7 +545,13 @@
              x-show="searchFocused && (searchLoading || searchResults.length > 0 || searchError || (searchQuery.trim().length >= 2 && !searchLoading))"
              x-cloak>
           <template x-if="searchLoading">
-            <div class="search-loading"><span class="spinner"></span><span>Searching…</span></div>
+            <div class="search-loading">
+              <svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true">
+                <circle cx="12" cy="12" r="9"/>
+                <circle class="spinner-arc" cx="12" cy="12" r="9" stroke-dasharray="14 60" stroke-linecap="round"/>
+              </svg>
+              <span>Searching…</span>
+            </div>
           </template>
           <template x-if="!searchLoading && searchError">
             <div class="search-message error" x-text="searchError"></div>
@@ -563,7 +569,10 @@
                 <img :src="item.capsule" alt="" loading="lazy" width="76" height="36">
                 <span x-text="item.name"></span>
                 <template x-if="addingAppid === item.appid">
-                  <span class="spinner row-spinner"></span>
+                  <svg class="spinner row-spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9"/>
+                    <circle class="spinner-arc" cx="12" cy="12" r="9" stroke-dasharray="14 60" stroke-linecap="round"/>
+                  </svg>
                 </template>
                 <template x-if="addingAppid !== item.appid && isInRotation(item.appid)">
                   <svg class="result-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-label="Already in rotation">
