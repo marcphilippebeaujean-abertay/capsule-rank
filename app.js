@@ -267,7 +267,6 @@ function capsuleRankApp() {
     searchLoading: false,
     searchError: null,
     searchFocused: false,
-    addingAppid: null,
     searchToken: 0,              // monotonic id so stale responses are ignored
     searchHighlight: 0,          // index of the keyboard-highlighted result
 
@@ -381,7 +380,15 @@ function capsuleRankApp() {
         const raw = localStorage.getItem(ROTATION_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) { this.rotation = parsed; return; }
+          if (Array.isArray(parsed)) {
+            this.rotation = parsed;
+            // If the page reloaded mid-add, finish hydrating any stubs that
+            // got persisted before steamDetails resolved.
+            for (const g of parsed) {
+              if (g._pending) this.hydrateRotationEntry(g.appid);
+            }
+            return;
+          }
         }
       } catch (e) {
         console.warn('rotation hydrate failed; reseeding from games.json:', e);
@@ -428,7 +435,10 @@ function capsuleRankApp() {
     refresh() {
       const hasUser = !!this.userGame.capsule;
       const sampleSize = hasUser ? 9 : 10;
-      this.sampledGames = sampleGames(this.rotation, sampleSize);
+      // Skip optimistic stubs — they're missing price/tags/reviews and would
+      // render half-baked cards in the comparison grid.
+      const ready = this.rotation.filter(g => !g._pending);
+      this.sampledGames = sampleGames(ready, sampleSize);
       this.userInsertIndex = hasUser ? Math.floor(Math.random() * 10) : null;
       this.activeRowKey = this.displayedRows[0]?.key ?? null;
       this.mobileSidebarOpen = false;
@@ -764,25 +774,34 @@ function capsuleRankApp() {
       return this.rotation.some(g => g.appid === appid);
     },
 
-    async toggleFromSearch(item) {
+    toggleFromSearch(item) {
       // Already in rotation → remove. Keep the search/dropdown open so the
       // user sees the checkmark vanish immediately and can keep curating.
       if (this.isInRotation(item.appid)) {
         this.removeFromRotation(item.appid);
         return;
       }
-      this.addingAppid = item.appid;
+      // Optimistic add: drop a stub in immediately so the dropdown can close
+      // and the rotation list updates without waiting on the network. Real
+      // fields stream in once steamDetails resolves; until then, refresh()
+      // filters _pending entries out of the comparison grid.
+      const stub = { appid: item.appid, name: item.name, _pending: true };
+      this.rotation = [stub, ...this.rotation];
+      this.clearSearchInput();
+      this.hydrateRotationEntry(item.appid);
+    },
+
+    async hydrateRotationEntry(appid) {
       try {
-        const record = await steamDetails(item.appid);
-        if (!this.isInRotation(record.appid)) {
-          this.rotation = [record, ...this.rotation];
-        }
-        this.clearSearchInput();
+        const record = await steamDetails(appid);
+        const idx = this.rotation.findIndex(g => g.appid === record.appid);
+        if (idx === -1) return; // user removed it during the fetch
+        this.rotation.splice(idx, 1, record);
       } catch (e) {
-        console.warn('steam details fetch failed:', e);
+        console.warn('steam details hydrate failed:', e);
+        // Roll back the optimistic stub so the user isn't left with a phantom.
+        this.rotation = this.rotation.filter(g => !(g._pending && g.appid === appid));
         this.searchError = "Couldn't add that game — try again.";
-      } finally {
-        this.addingAppid = null;
       }
     },
 
