@@ -187,6 +187,54 @@
         border: 1px solid #4a6a8a;
       }
     }
+
+    /* ===== Edit-games modal ===== */
+    .grid-actions { display: flex; gap: .5rem; }
+
+    .edit-games-modal { position: fixed; inset: 0; background: rgba(0, 0, 0, .75); z-index: 110; display: flex; align-items: flex-start; justify-content: center; padding: 4rem 1rem 1rem; overflow: auto; }
+    .edit-games-inner { background: #1b2838; color: #c7d5e0; border: 1px solid #2a475e; border-radius: 4px; width: 100%; max-width: 560px; max-height: calc(100vh - 6rem); display: flex; flex-direction: column; box-shadow: 0 16px 48px rgba(0, 0, 0, .6); }
+    .edit-games-header { display: flex; align-items: center; justify-content: space-between; padding: .85rem 1rem; border-bottom: 1px solid #2a475e; }
+    .edit-games-header h3 { margin: 0; font-size: 16px; text-transform: uppercase; letter-spacing: .05em; color: white; }
+    .edit-games-close { background: transparent; border: 0; color: #8f98a0; font-size: 20px; line-height: 1; cursor: pointer; padding: .25rem .5rem; border-radius: 2px; }
+    .edit-games-close:hover { background: rgba(255, 255, 255, .08); color: white; }
+
+    .search-wrap { position: relative; padding: .85rem 1rem; }
+    .search-bar { position: relative; display: flex; align-items: center; background: #0e141b; border: 1px solid #2a475e; border-radius: 3px; transition: border-color .12s ease; }
+    .search-bar:focus-within { border-color: #67c1f5; }
+    .search-bar input { flex: 1; min-width: 0; background: transparent; border: 0; color: #c7d5e0; font: inherit; padding: .55rem .75rem .55rem 2.1rem; outline: none; }
+    .search-bar input::placeholder { color: #6b7d8d; }
+    /* Hide the browser's native search-clear glyph; the custom one below handles clearing. */
+    .search-bar input[type="search"]::-webkit-search-cancel-button,
+    .search-bar input[type="search"]::-webkit-search-decoration { -webkit-appearance: none; appearance: none; display: none; }
+    .search-bar .search-icon { position: absolute; left: .65rem; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: #6b7d8d; pointer-events: none; }
+    .search-clear { background: transparent; border: 0; color: #8f98a0; font-size: 18px; line-height: 1; cursor: pointer; padding: 0 .65rem; height: 100%; }
+    .search-clear:hover { color: white; }
+
+    .search-dropdown { position: absolute; left: 1rem; right: 1rem; top: calc(100% - .35rem); background: #0e141b; border: 1px solid #2a475e; border-top: 0; border-radius: 0 0 3px 3px; max-height: 320px; overflow-y: auto; z-index: 1; box-shadow: 0 12px 24px rgba(0, 0, 0, .45); }
+    .search-result { display: flex; align-items: center; gap: .65rem; width: 100%; background: transparent; border: 0; padding: .4rem .65rem; cursor: pointer; color: #c7d5e0; text-align: left; font: inherit; border-bottom: 1px solid rgba(255, 255, 255, .04); }
+    .search-result:last-child { border-bottom: 0; }
+    .search-result.highlighted { background: #1b3550; outline: none; }
+    .search-result img { width: 76px; height: 35.5px; object-fit: cover; flex-shrink: 0; background: #0e141b; border-radius: 1px; }
+    .search-result > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+    .search-result.adding { opacity: .55; cursor: progress; }
+    .search-result .row-spinner { width: 14px; height: 14px; flex-shrink: 0; }
+    .search-result .result-check { width: 16px; height: 16px; flex-shrink: 0; color: #6cd14f; }
+    .search-empty, .search-message { padding: .65rem 1rem; color: #8f98a0; font-size: 13px; }
+    .search-message.error { color: #ff7878; }
+
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255, 255, 255, .15); border-top-color: #67c1f5; border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .search-loading { display: flex; align-items: center; gap: .5rem; padding: .65rem 1rem; color: #8f98a0; font-size: 13px; }
+
+    .rotation-list { padding: .25rem 1rem 1rem; overflow-y: auto; flex: 1; min-height: 0; }
+    .rotation-list-header { display: flex; align-items: baseline; justify-content: space-between; padding: .35rem .15rem; color: #8f98a0; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+    .rotation-row { display: flex; align-items: center; gap: .65rem; padding: .35rem .15rem; border-bottom: 1px solid rgba(255, 255, 255, .04); }
+    .rotation-row img { width: 76px; height: 35.5px; object-fit: cover; flex-shrink: 0; background: #0e141b; border-radius: 1px; }
+    .rotation-row .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+    .rotation-trash { background: transparent; border: 0; color: #6b7d8d; cursor: pointer; padding: .25rem .4rem; border-radius: 2px; }
+    .rotation-trash:hover { color: #ff7878; background: rgba(255, 120, 120, .08); }
+    .rotation-trash svg { width: 16px; height: 16px; display: block; }
+    .rotation-empty { padding: 1rem .15rem; color: #8f98a0; font-size: 13px; }
   </style>
 </head>
 <body x-data="capsuleRankApp" x-init="init()">
@@ -351,16 +399,25 @@
   <section class="grid-section" aria-label="Grid">
     <div class="grid-header">
       <h2>New &amp; Trending</h2>
-      <button type="button" class="refresh-btn" @click="refresh()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M16 3h5v5"/>
-          <path d="M4 20L21 3"/>
-          <path d="M21 16v5h-5"/>
-          <path d="M15 15l6 6"/>
-          <path d="M4 4l5 5"/>
-        </svg>
-        Shuffle
-      </button>
+      <div class="grid-actions">
+        <button type="button" class="refresh-btn" @click="openEditGames()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 20h9"/>
+            <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4z"/>
+          </svg>
+          Edit games
+        </button>
+        <button type="button" class="refresh-btn" @click="refresh()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M16 3h5v5"/>
+            <path d="M4 20L21 3"/>
+            <path d="M21 16v5h-5"/>
+            <path d="M15 15l6 6"/>
+            <path d="M4 4l5 5"/>
+          </svg>
+          Shuffle
+        </button>
+      </div>
     </div>
     <p class="warn-severe" x-show="loadError" x-text="loadError"></p>
     <p class="empty-prompt" x-show="!userGame.capsule && !loadError">Upload a capsule above to drop yours in.</p>
@@ -447,6 +504,103 @@
       <div class="crop-actions">
         <button type="button" @click="cancelCrop()">Cancel</button>
         <button type="button" class="primary" @click="applyCrop()">Use this crop</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="edit-games-modal"
+       x-show="showEditGames"
+       x-cloak
+       @click.self="closeEditGames()"
+       @keydown.escape.window="if (showEditGames) closeEditGames()">
+    <div class="edit-games-inner">
+      <div class="edit-games-header">
+        <h3>Edit games</h3>
+        <button type="button" class="edit-games-close" @click="closeEditGames()" aria-label="Close">×</button>
+      </div>
+
+      <div class="search-wrap" @click.outside="searchFocused = false">
+        <div class="search-bar">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"/>
+            <path d="M21 21l-4.35-4.35"/>
+          </svg>
+          <input type="search"
+                 placeholder="Search Steam to add a game…"
+                 x-model="searchQuery"
+                 @focus="searchFocused = true"
+                 @input.debounce.300ms="onSearchInput()"
+                 @keydown.down.prevent="moveHighlight(1)"
+                 @keydown.up.prevent="moveHighlight(-1)"
+                 @keydown.enter.prevent="addHighlighted()">
+          <button type="button"
+                  class="search-clear"
+                  x-show="searchQuery.length > 0"
+                  @mousedown.prevent
+                  @click="clearSearchInput()"
+                  aria-label="Clear search">×</button>
+        </div>
+
+        <div class="search-dropdown"
+             x-show="searchFocused && (searchLoading || searchResults.length > 0 || searchError || (searchQuery.trim().length >= 2 && !searchLoading))"
+             x-cloak>
+          <template x-if="searchLoading">
+            <div class="search-loading"><span class="spinner"></span><span>Searching…</span></div>
+          </template>
+          <template x-if="!searchLoading && searchError">
+            <div class="search-message error" x-text="searchError"></div>
+          </template>
+          <template x-if="!searchLoading && !searchError">
+            <template x-for="(item, idx) in searchResults" :key="item.appid">
+              <button type="button"
+                      class="search-result"
+                      :class="{ adding: addingAppid === item.appid, highlighted: searchHighlight === idx }"
+                      :data-idx="idx"
+                      @mousedown.prevent
+                      @mouseenter="searchHighlight = idx"
+                      @click="toggleFromSearch(item)"
+                      :disabled="addingAppid !== null">
+                <img :src="item.capsule" alt="" loading="lazy" width="76" height="36">
+                <span x-text="item.name"></span>
+                <template x-if="addingAppid === item.appid">
+                  <span class="spinner row-spinner"></span>
+                </template>
+                <template x-if="addingAppid !== item.appid && isInRotation(item.appid)">
+                  <svg class="result-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-label="Already in rotation">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </template>
+              </button>
+            </template>
+          </template>
+          <template x-if="!searchLoading && !searchError && searchResults.length === 0 && searchQuery.trim().length >= 2">
+            <div class="search-empty">No results.</div>
+          </template>
+        </div>
+      </div>
+
+      <div class="rotation-list">
+        <div class="rotation-list-header">
+          <span>Total</span>
+          <span x-text="rotation.length"></span>
+        </div>
+        <template x-if="rotation.length === 0">
+          <div class="rotation-empty">Your rotation is empty — search above to add games.</div>
+        </template>
+        <template x-for="g in rotation" :key="g.appid">
+          <div class="rotation-row">
+            <img :src="`https://cdn.cloudflare.steamstatic.com/steam/apps/${g.appid}/header.jpg`" alt="" loading="lazy" width="76" height="36">
+            <span class="name" x-text="g.name"></span>
+            <button type="button" class="rotation-trash" @click="removeFromRotation(g.appid)" :aria-label="`Remove ${g.name}`" :title="`Remove ${g.name}`">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6M14 11v6"/>
+                <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>
+              </svg>
+            </button>
+          </div>
+        </template>
       </div>
     </div>
   </div>

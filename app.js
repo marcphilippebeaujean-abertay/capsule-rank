@@ -5,6 +5,7 @@
 
 const STEAM_HEADER_RATIO = 460 / 215; // ≈ 2.1395
 const STORAGE_KEY = 'capsuleRank.userGame';
+const ROTATION_KEY = 'capsuleRank.rotation';
 
 // Steam proxy lives on the kings-path-save-system Firebase project's hosting
 // rewrites — see kings-path-server/firebase.json. Override with
@@ -232,7 +233,9 @@ function newId() {
 
 function capsuleRankApp() {
   return {
-    games: [],
+    // The user's rotation of comparison games, persisted in localStorage.
+    // games.json seeds this on first load; afterwards it's never read again.
+    rotation: [],
     loadError: null,
     userGame: defaultUserGame(),
     capsuleLibrary: [],          // [{ id, dataUrl, createdAt }] hydrated from IndexedDB
@@ -257,6 +260,17 @@ function capsuleRankApp() {
     cropEditingId: null,         // when set, applyCrop updates that library record instead of creating a new one
     dragActive: false,           // true while a file is being dragged over the capsule preview
 
+    // Edit-games modal + Steam search state (transient).
+    showEditGames: false,
+    searchQuery: '',
+    searchResults: [],
+    searchLoading: false,
+    searchError: null,
+    searchFocused: false,
+    addingAppid: null,
+    searchToken: 0,              // monotonic id so stale responses are ignored
+    searchHighlight: 0,          // index of the keyboard-highlighted result
+
     async init() {
       this.hydrate();
       this.installPersister();
@@ -268,9 +282,9 @@ function capsuleRankApp() {
       } catch (e) {
         console.warn('IndexedDB load failed:', e);
       }
-      await this.loadGames();
-      if (this.userGame.tags.length === 0 && this.games.length > 0) {
-        this.userGame.tags = randomTags(this.games, 3);
+      await this.loadRotation();
+      if (this.userGame.tags.length === 0 && this.rotation.length > 0) {
+        this.userGame.tags = randomTags(this.rotation, 3);
       }
       this.refresh();
     },
@@ -337,7 +351,7 @@ function capsuleRankApp() {
     },
 
     installPersister() {
-      const write = debounce(() => {
+      const writeUser = debounce(() => {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(this.userGame));
           this.storageWarning = null;
@@ -346,14 +360,39 @@ function capsuleRankApp() {
           console.warn('localStorage write failed:', e);
         }
       }, 250);
-      this.$watch('userGame', () => write(), { deep: true });
+      this.$watch('userGame', () => writeUser(), { deep: true });
+
+      const writeRotation = debounce(() => this.persistRotationNow(), 250);
+      this.$watch('rotation', () => writeRotation(), { deep: true });
     },
 
-    async loadGames() {
+    persistRotationNow() {
+      try {
+        localStorage.setItem(ROTATION_KEY, JSON.stringify(this.rotation));
+        this.storageWarning = null;
+      } catch (e) {
+        this.storageWarning = "Couldn't save your rotation — browser storage is full.";
+        console.warn('localStorage rotation write failed:', e);
+      }
+    },
+
+    async loadRotation() {
+      try {
+        const raw = localStorage.getItem(ROTATION_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) { this.rotation = parsed; return; }
+        }
+      } catch (e) {
+        console.warn('rotation hydrate failed; reseeding from games.json:', e);
+      }
+      // First load (or corrupted storage): seed from games.json once, then
+      // never touch the file again.
       try {
         const res = await fetch('games.json');
         if (!res.ok) throw new Error('HTTP ' + res.status);
-        this.games = await res.json();
+        this.rotation = await res.json();
+        this.persistRotationNow();
       } catch (e) {
         this.loadError = "Couldn't load comparison games. Check your connection and refresh.";
         console.warn('games.json fetch failed:', e);
@@ -389,7 +428,7 @@ function capsuleRankApp() {
     refresh() {
       const hasUser = !!this.userGame.capsule;
       const sampleSize = hasUser ? 9 : 10;
-      this.sampledGames = sampleGames(this.games, sampleSize);
+      this.sampledGames = sampleGames(this.rotation, sampleSize);
       this.userInsertIndex = hasUser ? Math.floor(Math.random() * 10) : null;
       this.activeRowKey = this.displayedRows[0]?.key ?? null;
       this.mobileSidebarOpen = false;
@@ -626,8 +665,8 @@ function capsuleRankApp() {
       this.userGame = defaultUserGame();
       this.capsuleWarning = null;
       try { localStorage.removeItem(STORAGE_KEY); } catch {}
-      if (this.games.length > 0) {
-        this.userGame.tags = randomTags(this.games, 3);
+      if (this.rotation.length > 0) {
+        this.userGame.tags = randomTags(this.rotation, 3);
       }
       this.refresh();
     },
@@ -635,7 +674,7 @@ function capsuleRankApp() {
     onCapsuleImageError(row) {
       if (row.isUser) return;
       const usedIds = new Set(this.sampledGames.map(g => g.appid));
-      const unused = this.games.filter(g => !usedIds.has(g.appid) && g.appid !== row.appid);
+      const unused = this.rotation.filter(g => !usedIds.has(g.appid) && g.appid !== row.appid);
       const replacement = sampleGames(unused, 1)[0];
       const idx = this.sampledGames.findIndex(g => g.appid === row.appid);
       if (idx === -1) return;
@@ -648,6 +687,107 @@ function capsuleRankApp() {
         this.activeRowKey = this.displayedRows[0]?.key ?? null;
       }
       console.warn('swapped out broken capsule for appid', row.appid);
+    },
+
+    // ===== Edit-games modal + Steam search =====
+
+    openEditGames() {
+      this.showEditGames = true;
+      this.searchQuery = '';
+      this.searchResults = [];
+      this.searchError = null;
+      this.searchFocused = false;
+      this.searchHighlight = 0;
+      this.$nextTick(() => {
+        const el = document.querySelector('.edit-games-modal input[type="search"]');
+        if (el) el.focus();
+      });
+    },
+
+    closeEditGames() {
+      this.showEditGames = false;
+      this.searchFocused = false;
+      this.refresh();
+    },
+
+    clearSearchInput() {
+      this.searchQuery = '';
+      this.searchResults = [];
+      this.searchError = null;
+      this.searchLoading = false;
+      const el = document.querySelector('.edit-games-modal input[type="search"]');
+      if (el) el.focus();
+    },
+
+    async onSearchInput() {
+      const q = this.searchQuery.trim();
+      if (q.length < 2) {
+        this.searchResults = [];
+        this.searchLoading = false;
+        this.searchError = null;
+        return;
+      }
+      const token = ++this.searchToken;
+      this.searchLoading = true;
+      this.searchError = null;
+      try {
+        const { items } = await steamSearch(q);
+        if (token !== this.searchToken) return; // a newer query already kicked off
+        this.searchResults = items;
+        this.searchHighlight = 0;
+      } catch (e) {
+        if (token !== this.searchToken) return;
+        console.warn('steam search failed:', e);
+        this.searchError = 'Search failed. Try again.';
+        this.searchResults = [];
+      } finally {
+        if (token === this.searchToken) this.searchLoading = false;
+      }
+    },
+
+    moveHighlight(delta) {
+      const n = this.searchResults.length;
+      if (n === 0) return;
+      this.searchHighlight = (this.searchHighlight + delta + n) % n;
+      this.$nextTick(() => {
+        const el = document.querySelector(`.search-result[data-idx="${this.searchHighlight}"]`);
+        if (el) el.scrollIntoView({ block: 'nearest' });
+      });
+    },
+
+    addHighlighted() {
+      const item = this.searchResults[this.searchHighlight];
+      if (item) this.toggleFromSearch(item);
+    },
+
+    isInRotation(appid) {
+      return this.rotation.some(g => g.appid === appid);
+    },
+
+    async toggleFromSearch(item) {
+      // Already in rotation → remove. Keep the search/dropdown open so the
+      // user sees the checkmark vanish immediately and can keep curating.
+      if (this.isInRotation(item.appid)) {
+        this.removeFromRotation(item.appid);
+        return;
+      }
+      this.addingAppid = item.appid;
+      try {
+        const record = await steamDetails(item.appid);
+        if (!this.isInRotation(record.appid)) {
+          this.rotation = [record, ...this.rotation];
+        }
+        this.clearSearchInput();
+      } catch (e) {
+        console.warn('steam details fetch failed:', e);
+        this.searchError = "Couldn't add that game — try again.";
+      } finally {
+        this.addingAppid = null;
+      }
+    },
+
+    removeFromRotation(appid) {
+      this.rotation = this.rotation.filter(g => g.appid !== appid);
     },
   };
 }
