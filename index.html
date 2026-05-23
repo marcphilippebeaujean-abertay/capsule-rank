@@ -210,6 +210,7 @@
               <div class="row-platforms">
                 <template x-if="row.platforms?.includes('windows')"><span class="plat win" title="Windows"></span></template>
                 <template x-if="row.platforms?.includes('mac')"><span class="plat mac" title="Mac"></span></template>
+                <template x-if="row.platforms?.includes('linux')"><span class="plat linux" title="Linux"></span></template>
               </div>
               <div class="row-tags" x-text="(row.tags || []).join(', ')"></div>
             </div>

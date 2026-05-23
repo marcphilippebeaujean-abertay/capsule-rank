@@ -143,15 +143,16 @@ details.advanced[open] summary { margin-bottom: .5rem; }
 
 .row-platforms { display: flex; gap: .25rem; margin-bottom: .25rem; }
 .plat { display: inline-block; width: 14px; height: 14px; background: rgba(255,255,255,.2); border-radius: 2px; }
-.plat.win, .plat.mac {
+.plat.win, .plat.mac, .plat.linux {
   background: center/contain no-repeat;
   border-radius: 0;
-  /* Source PNGs are pure black; tint to a neutral gray that reads on both
+  /* Source art is pure black; tint to a neutral gray that reads on both
      the dark default row and the lighter active-row gradient. */
   filter: invert(72%);
 }
 .plat.win { background-image: url("windows.png"); }
 .plat.mac { background-image: url("mac.png"); }
+.plat.linux { background-image: url("linux.svg"); }
 
 .row-price-block { display: flex; align-items: stretch; gap: 0; }
 .discount-badge {
