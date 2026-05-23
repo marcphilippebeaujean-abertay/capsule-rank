@@ -1,6 +1,6 @@
 // Minifying production build → dist/.
 // Run by GitHub Actions on deploy; safe to run locally too (`npm run build`).
-import { mkdir, readFile, writeFile, copyFile, rm } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, copyFile, rm, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { build as esbuild } from 'esbuild';
@@ -32,7 +32,13 @@ await esbuild({
   loader: { '.css': 'css' },
 });
 
-const html = await readFile(path.join(ROOT, 'index.html'), 'utf8');
+const minCss = await readFile(path.join(DIST, 'style.css'), 'utf8');
+const htmlSrc = await readFile(path.join(ROOT, 'index.html'), 'utf8');
+const linkRe = /<link\s+rel="stylesheet"\s+href="style\.css"\s*>/;
+if (!linkRe.test(htmlSrc)) {
+  throw new Error('build: could not find <link rel="stylesheet" href="style.css"> in index.html');
+}
+const html = htmlSrc.replace(linkRe, `<style>${minCss}</style>`);
 const minHtml = await minifyHtml(html, {
   collapseWhitespace: true,
   conservativeCollapse: true,
@@ -50,7 +56,12 @@ for (const file of ['games.json', 'favicon.svg', 'windows.png', 'mac.png']) {
   await copyFile(path.join(ROOT, file), path.join(DIST, file));
 }
 
-for (const file of ['app.js', 'style.css', 'index.html']) {
+const cssInSize = (await readFile(path.join(ROOT, 'style.css'))).length;
+const cssOutSize = minCss.length;
+console.log(`style.css  ${cssInSize} → ${cssOutSize} bytes (${((1 - cssOutSize / cssInSize) * 100).toFixed(1)}% smaller, inlined into index.html)`);
+await unlink(path.join(DIST, 'style.css'));
+
+for (const file of ['app.js', 'index.html']) {
   const inSize = (await readFile(path.join(ROOT, file))).length;
   const outSize = (await readFile(path.join(DIST, file))).length;
   const pct = ((1 - outSize / inSize) * 100).toFixed(1);
