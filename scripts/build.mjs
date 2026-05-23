@@ -22,6 +22,16 @@ await esbuild({
   legalComments: 'none',
 });
 
+await esbuild({
+  entryPoints: [path.join(ROOT, 'style.css')],
+  outfile: path.join(DIST, 'style.css'),
+  bundle: false,
+  minify: true,
+  target: ['chrome92', 'safari15.4', 'firefox95', 'edge92'],
+  legalComments: 'none',
+  loader: { '.css': 'css' },
+});
+
 const html = await readFile(path.join(ROOT, 'index.html'), 'utf8');
 const minHtml = await minifyHtml(html, {
   collapseWhitespace: true,
@@ -40,7 +50,10 @@ for (const file of ['games.json', 'favicon.svg', 'windows.png', 'mac.png']) {
   await copyFile(path.join(ROOT, file), path.join(DIST, file));
 }
 
-const inSize = (await readFile(path.join(ROOT, 'app.js'))).length;
-const outSize = (await readFile(path.join(DIST, 'app.js'))).length;
-console.log(`app.js: ${inSize} → ${outSize} bytes (${((1 - outSize / inSize) * 100).toFixed(1)}% smaller)`);
+for (const file of ['app.js', 'style.css', 'index.html']) {
+  const inSize = (await readFile(path.join(ROOT, file))).length;
+  const outSize = (await readFile(path.join(DIST, file))).length;
+  const pct = ((1 - outSize / inSize) * 100).toFixed(1);
+  console.log(`${file.padEnd(10)} ${inSize} → ${outSize} bytes (${pct}% smaller)`);
+}
 console.log(`built → ${path.relative(ROOT, DIST)}/`);

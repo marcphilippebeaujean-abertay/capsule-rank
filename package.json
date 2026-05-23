@@ -8,6 +8,7 @@
   },
   "scripts": {
     "lint": "eslint app.js scripts",
+    "lint:css": "stylelint style.css",
     "test": "node scripts/run-tests.mjs",
     "build": "node scripts/build.mjs",
     "precommit": "node scripts/precommit.mjs",
@@ -23,6 +24,8 @@
     "globals": "^15.13.0",
     "html-minifier-terser": "^7.2.0",
     "husky": "^9.1.7",
-    "playwright": "^1.59.1"
+    "playwright": "^1.59.1",
+    "stylelint": "^17.12.0",
+    "stylelint-config-recommended": "^18.0.0"
   }
 }

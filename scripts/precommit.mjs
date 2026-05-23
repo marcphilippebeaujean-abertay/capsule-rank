@@ -1,4 +1,4 @@
-// Pre-commit gate: ESLint, then headless tests.html. Fail fast.
+// Pre-commit gate: ESLint, stylelint, then headless tests.html. Fail fast.
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,6 +16,7 @@ function step(name, cmd, args) {
 
 const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 step('eslint', npx, ['eslint', 'app.js', 'scripts']);
+step('stylelint', npx, ['stylelint', 'style.css']);
 step('tests.html', process.execPath, ['scripts/run-tests.mjs']);
 
 console.log('\n✓ pre-commit checks passed');

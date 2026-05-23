@@ -1,0 +1,9 @@
+{
+  "extends": ["stylelint-config-recommended"],
+  "rules": {
+    "no-duplicate-selectors": true,
+    "no-descending-specificity": null,
+    "declaration-block-no-redundant-longhand-properties": null,
+    "shorthand-property-no-redundant-values": true
+  }
+}
