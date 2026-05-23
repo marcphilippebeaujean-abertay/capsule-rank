@@ -261,7 +261,8 @@
   </section>
   </main>
 
-  <div class="crop-modal" x-show="cropping" x-cloak>
+  <div class="crop-modal" x-show="cropping" x-cloak
+       @keydown.escape.window="if (cropping) cancelCrop()">
     <div class="crop-modal-inner">
       <p class="crop-hint">Drag the image to choose what shows in the 460 × 215 capsule.</p>
       <div class="crop-stage"
