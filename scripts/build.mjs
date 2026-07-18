@@ -52,7 +52,7 @@ const minHtml = await minifyHtml(html, {
 });
 await writeFile(path.join(DIST, 'index.html'), minHtml);
 
-for (const file of ['games.json', 'favicon.svg', 'windows.png', 'mac.png', 'linux.svg']) {
+for (const file of ['games.json', 'favicon.svg', 'windows.png', 'mac.png', 'linux.svg', 'legal.html']) {
   await copyFile(path.join(ROOT, file), path.join(DIST, file));
 }
 

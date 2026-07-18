@@ -244,6 +244,11 @@ details.advanced[open] summary { margin-bottom: .5rem; }
 .rotation-trash svg { width: 16px; height: 16px; display: block; }
 .rotation-empty { padding: 1rem .15rem; color: var(--text-muted); font-size: 13px; }
 
+/* ===== Footer ===== */
+.site-footer { max-width: 1060px; margin: 2.5rem auto 0; padding: 1.25rem 1rem 2rem; border-top: 1px solid var(--border-muted); color: var(--text-faint); font-size: 12px; text-align: center; }
+.site-footer p { margin: 0 0 .5rem; }
+.site-footer nav { display: flex; justify-content: center; gap: 1.25rem; }
+
 /* ===== Responsive ===== */
 @media (max-width: 900px) {
   .editor { grid-template-columns: minmax(0, 1fr); padding: 1rem; gap: 1rem; }
