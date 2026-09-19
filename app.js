@@ -8,6 +8,7 @@ const CAPSULE_MODE_CONFIG = {
   newAndTrending: { width: 460, height: 215, label: 'Featured' },
   search: { width: 231, height: 87, label: 'Search' },
 };
+const CAPSULE_RUNTIME_WIDTH = 920;
 const STORAGE_KEY = 'capsuleRank.userGame';
 const VIEW_MODE_KEY = 'capsuleRank.viewMode';
 
@@ -20,17 +21,38 @@ function capsuleDisplayHeight(mode, displayWidth) {
   return Math.round(displayWidth * height / width);
 }
 
+function capsuleRuntimeDimensions(mode) {
+  return {
+    width: CAPSULE_RUNTIME_WIDTH,
+    height: capsuleDisplayHeight(mode, CAPSULE_RUNTIME_WIDTH),
+  };
+}
+
 function capsuleVariantImage(record, mode) {
   const selected = record?.[mode]?.imageData;
   return selected || record?.newAndTrending?.imageData || null;
 }
 
-function initialCapsuleVariants(variant) {
-  const copy = () => ({
+function initialCapsuleVariants(newAndTrending, search) {
+  const copy = variant => ({
     imageData: variant.imageData,
     cropState: variant.cropState ? { ...variant.cropState } : null,
   });
-  return { newAndTrending: copy(), search: copy() };
+  return { newAndTrending: copy(newAndTrending), search: copy(search) };
+}
+
+function nextCapsuleAfterDelete(records, deletedId) {
+  const index = records.indexOf(deletedId);
+  if (index < 0) return records[0] || null;
+  return records[index + 1] || records[index - 1] || null;
+}
+
+function capsuleUploadTarget(intent, activeId) {
+  return intent === 'update' && activeId ? activeId : null;
+}
+
+function assetPreviewLayoutHeight(previewHeight) {
+  return Math.ceil(previewHeight + 12);
 }
 
 const ROTATION_KEY = 'capsuleRank.rotation';
@@ -166,6 +188,17 @@ async function cropToDataURL(dataUrl, srcRect, targetW, targetH, mime = 'image/j
   return canvas.toDataURL(mime, quality);
 }
 
+async function resizeImageData(dataUrl, targetW, targetH, mime = 'image/jpeg', quality = 0.82) {
+  const img = await loadImage(dataUrl);
+  const canvas = document.createElement('canvas');
+  canvas.width = targetW;
+  canvas.height = targetH;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, targetW, targetH);
+  return canvas.toDataURL(mime, quality);
+}
+
 function debounce(fn, ms) {
   let t = null;
   return function (...args) {
@@ -234,10 +267,20 @@ async function dbAllCapsules() {
 }
 
 async function dbPutCapsule(record) {
+  const persisted = { ...record };
+  for (const mode of Object.keys(CAPSULE_MODE_CONFIG)) {
+    const variant = record[mode];
+    if (!variant?.imageData) continue;
+    const { width, height } = capsuleModeConfig(mode);
+    persisted[mode] = {
+      ...variant,
+      imageData: await resizeImageData(variant.imageData, width, height),
+    };
+  }
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_CAPSULES, 'readwrite');
-    tx.objectStore(STORE_CAPSULES).put(record);
+    tx.objectStore(STORE_CAPSULES).put(persisted);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
@@ -272,6 +315,7 @@ function capsuleRankApp() {
     sampledGames: [],
     userInsertIndex: null,
     activeRowKey: null,
+    comparisonMinHeight: 0,
     capsuleMode: 'newAndTrending',
 
     // Mobile sidebar overlay state.
@@ -289,6 +333,8 @@ function capsuleRankApp() {
     cropDragStart: null,
     cropEditingId: null,         // when set, applyCrop updates that library record instead of creating a new one
     cropVariant: 'newAndTrending',
+    pendingDeleteCapsule: null,
+    deleteConfirmOpen: false,
     dragActive: false,           // true while a file is being dragged over the capsule preview
 
     // Edit-games modal + Steam search state (transient).
@@ -324,7 +370,12 @@ function capsuleRankApp() {
       this.isMobile = mq.matches;
       mq.addEventListener('change', e => {
         this.isMobile = e.matches;
-        if (!e.matches) this.mobileSidebarOpen = false;
+        if (e.matches) {
+          this.comparisonMinHeight = 0;
+        } else {
+          this.mobileSidebarOpen = false;
+          this.scheduleComparisonHeight();
+        }
       });
       // Close the mobile sidebar when the user taps anywhere that's not inside the sidebar
       // and not inside a row. Alpine's @click.outside fires in capture phase and races with
@@ -347,7 +398,7 @@ function capsuleRankApp() {
             const file = item.getAsFile();
             if (!file) continue;
             e.preventDefault();
-            this.cropEditingId = null;
+            this.cropEditingId = capsuleUploadTarget('update', this.userGame.activeCapsuleId);
             this.loadCapsuleFile(file);
             return;
           }
@@ -358,6 +409,7 @@ function capsuleRankApp() {
     onRowClick(rowKey, event) {
       const sameRow = this.activeRowKey === rowKey;
       this.activeRowKey = rowKey;
+      this.scheduleComparisonHeight();
       if (!this.isMobile) return;
       // Tap the same row again → toggle the overlay closed (clear close gesture).
       if (sameRow && this.mobileSidebarOpen) {
@@ -385,7 +437,10 @@ function capsuleRankApp() {
     installPersister() {
       const writeUser = debounce(() => {
         try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(this.userGame));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            ...this.userGame,
+            capsule: Boolean(this.userGame.capsule),
+          }));
           this.storageWarning = null;
         } catch (e) {
           this.storageWarning = "Couldn't save — your browser storage is full.";
@@ -475,7 +530,7 @@ function capsuleRankApp() {
       return this.capsuleLibrary.find(c => c.id === this.userGame.activeCapsuleId) || null;
     },
     get activeCapsuleImage() {
-      return capsuleVariantImage(this.activeCapsule, this.capsuleMode) || this.userGame.capsule;
+      return capsuleVariantImage(this.activeCapsule, this.capsuleMode) || null;
     },
 
     refresh() {
@@ -488,6 +543,24 @@ function capsuleRankApp() {
       this.userInsertIndex = hasUser ? Math.floor(Math.random() * 10) : null;
       this.activeRowKey = this.displayedRows[0]?.key ?? null;
       this.mobileSidebarOpen = false;
+      this.scheduleComparisonHeight();
+    },
+
+    scheduleComparisonHeight() {
+      if (this.isMobile) return;
+      this.$nextTick(() => requestAnimationFrame(() => {
+        const sidebar = this.$root.querySelector('.sidebar');
+        const rows = this.$root.querySelector('.grid-rows');
+        if (!sidebar || !rows) return;
+        const previewHeight = Math.max(sidebar.getBoundingClientRect().height, rows.getBoundingClientRect().height);
+        const height = assetPreviewLayoutHeight(previewHeight);
+        this.comparisonMinHeight = Math.max(this.comparisonMinHeight, height);
+      }));
+    },
+
+    setActiveRow(rowKey) {
+      this.activeRowKey = rowKey;
+      this.scheduleComparisonHeight();
     },
 
     priceFor(row) { return formatPrice(row.price ?? 1199, row.discountPct ?? 0); },
@@ -497,7 +570,6 @@ function capsuleRankApp() {
     setCapsuleMode(mode) {
       this.capsuleMode = CAPSULE_MODE_CONFIG[mode] ? mode : 'newAndTrending';
       try { localStorage.setItem(VIEW_MODE_KEY, this.capsuleMode); } catch {}
-      if (this.userGame.capsule) this.userGame.capsule = this.activeCapsuleImage;
     },
     screenshotsFor(row) {
       const ids = row.screenshotIds || [];
@@ -522,15 +594,25 @@ function capsuleRankApp() {
       }
     },
 
-    async onCapsuleSelected(event) {
+    async uploadForNewCapsuleConcept(event) {
       const file = event.target.files?.[0];
       event.target.value = '';
+      this.cropEditingId = capsuleUploadTarget('new', this.userGame.activeCapsuleId);
+      await this.loadCapsuleFile(file);
+    },
+
+    async uploadViaCapsuleUpdate(event) {
+      const file = event.target.files?.[0];
+      event.target.value = '';
+      this.cropEditingId = capsuleUploadTarget('update', this.userGame.activeCapsuleId);
+      if (!this.cropEditingId) return;
       await this.loadCapsuleFile(file);
     },
 
     async onCapsuleDropped(event) {
       this.dragActive = false;
       const file = event.dataTransfer?.files?.[0];
+      this.cropEditingId = capsuleUploadTarget('update', this.userGame.activeCapsuleId);
       await this.loadCapsuleFile(file);
     },
 
@@ -582,6 +664,7 @@ function capsuleRankApp() {
     async applyCrop() {
       const m = this.cropMetrics(this.cropSourceW, this.cropSourceH);
       const { width, height } = this.cropConfig;
+      const runtime = capsuleRuntimeDimensions(this.cropVariant);
       const cropState = {
         x: -this.cropOffsetX / m.scale,
         y: -this.cropOffsetY / m.scale,
@@ -589,7 +672,7 @@ function capsuleRankApp() {
         height: height / m.scale,
       };
       try {
-        const cropped = await cropToDataURL(this.cropSourceUrl, cropState, width, height);
+        const cropped = await cropToDataURL(this.cropSourceUrl, cropState, runtime.width, runtime.height, 'image/png');
         const variant = { imageData: cropped, cropState };
 
         if (this.cropEditingId) {
@@ -603,21 +686,36 @@ function capsuleRankApp() {
               ...this.capsuleLibrary.slice(idx + 1),
             ];
             if (this.userGame.activeCapsuleId === this.cropEditingId) {
-              this.userGame.capsule = cropped;
+              this.userGame.capsule = true;
             }
           }
         } else {
+          const otherMode = this.cropVariant === 'newAndTrending' ? 'search' : 'newAndTrending';
+          const otherConfig = capsuleModeConfig(otherMode);
+          const otherCropState = centerCropRect(this.cropSourceW, this.cropSourceH, otherConfig.width, otherConfig.height);
+          const otherRuntime = capsuleRuntimeDimensions(otherMode);
+          const otherImage = await cropToDataURL(
+            this.cropSourceUrl,
+            otherCropState,
+            otherRuntime.width,
+            otherRuntime.height,
+            'image/png',
+          );
+          const otherVariant = { imageData: otherImage, cropState: otherCropState };
+          const variants = this.cropVariant === 'newAndTrending'
+            ? initialCapsuleVariants(variant, otherVariant)
+            : initialCapsuleVariants(otherVariant, variant);
           const record = {
             id: newId(),
             sourceDataUrl: this.cropSourceUrl,
             sourceW: this.cropSourceW,
             sourceH: this.cropSourceH,
-            ...initialCapsuleVariants(variant),
+            ...variants,
             createdAt: Date.now(),
           };
           try { await dbPutCapsule(record); } catch (e) { console.warn('IndexedDB write failed:', e); }
           this.capsuleLibrary = [record, ...this.capsuleLibrary];
-          this.userGame.capsule = cropped;
+          this.userGame.capsule = true;
           this.userGame.activeCapsuleId = record.id;
           this.refresh();
         }
@@ -648,22 +746,41 @@ function capsuleRankApp() {
     },
 
     selectCapsule(record) {
-      this.userGame.capsule = capsuleVariantImage(record, this.capsuleMode);
+      this.userGame.capsule = true;
       this.userGame.activeCapsuleId = record.id;
     },
 
-    async deleteCapsule(record) {
+    requestDeleteCapsule(record) {
+      this.pendingDeleteCapsule = record;
+      this.deleteConfirmOpen = true;
+    },
+
+    cancelDeleteCapsule() {
+      this.pendingDeleteCapsule = null;
+      this.deleteConfirmOpen = false;
+    },
+
+    async confirmDeleteCapsule() {
+      const record = this.pendingDeleteCapsule;
+      if (!record) return;
+      const ids = this.capsuleLibrary.map(c => c.id);
+      const nextId = nextCapsuleAfterDelete(ids, record.id);
+      this.cancelDeleteCapsule();
       try {
         await dbDeleteCapsule(record.id);
       } catch (e) {
         console.warn('IndexedDB delete failed:', e);
       }
       this.capsuleLibrary = this.capsuleLibrary.filter(c => c.id !== record.id);
-      if (this.userGame.activeCapsuleId === record.id) {
+      if (this.userGame.activeCapsuleId !== record.id) return;
+      const next = this.capsuleLibrary.find(c => c.id === nextId);
+      if (next) {
+        this.selectCapsule(next);
+      } else {
         this.userGame.capsule = null;
         this.userGame.activeCapsuleId = null;
-        this.refresh();
       }
+      this.refresh();
     },
 
     clearCapsule() {

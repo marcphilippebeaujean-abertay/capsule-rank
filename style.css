@@ -119,11 +119,20 @@ details.advanced[open] summary { margin-bottom: .5rem; }
   background: linear-gradient(to bottom, var(--accent-hover-top), var(--accent-hover-bottom));
 }
 .refresh-btn { display: inline-flex; align-items: center; gap: .4rem; padding: .5rem 1rem; border-radius: 2px; }
+.delete-confirm-modal { position: fixed; inset: 0; z-index: 120; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(0, 0, 0, .75); }
+.delete-confirm-inner { width: min(100%, 360px); padding: 1.25rem; background: var(--bg-base); border: 1px solid var(--bg-modal-border); border-radius: 4px; box-shadow: 0 12px 32px rgba(0, 0, 0, .55); }
+.delete-confirm-inner h3 { margin: 0 0 .5rem; color: white; font-size: 18px; }
+.delete-confirm-inner p { margin: 0; color: var(--text-muted); font-size: 13px; }
+.delete-confirm-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1.25rem; }
+.delete-confirm-actions button { padding: .45rem .8rem; background: var(--bg-modal-border); border: 1px solid var(--border-muted); border-radius: 2px; color: var(--text-main); cursor: pointer; font: inherit; }
+.delete-confirm-actions button:hover { background: #36556f; color: white; }
+.delete-confirm-actions button.danger { background: #8b3030; border-color: #b84a4a; color: white; }
+.delete-confirm-actions button.danger:hover { background: #ad3b3b; }
 .refresh-btn svg { width: 14px; height: 14px; display: block; }
 
 .empty-prompt { color: var(--text-placeholder); padding: .5rem 0; }
 .search-results-column { min-width: 0; }
-.steam-search-preview { display: flex; align-items: center; gap: .55rem; width: min(100%, 460px); box-sizing: border-box; margin: 0 0 .75rem auto; padding: .35rem .65rem; background: #d6e4f0; border: 1px solid #8aa7bf; border-radius: 2px; color: #3d6685; box-shadow: 0 2px 5px rgba(0, 0, 0, .25); }
+.steam-search-preview { display: flex; align-items: center; gap: .55rem; width: min(100%, 460px); box-sizing: border-box; margin: 0 0 .75rem auto; padding: .35rem .65rem; background: #242b35; border: 0; border-radius: 2px; color: #a7b3c2; box-shadow: 0 2px 5px rgba(0, 0, 0, .3); }
 .grid-section.search-mode .search-results-column { display: flex; flex-direction: column; align-items: flex-end; }
 .steam-search-preview svg { width: 15px; height: 15px; flex: 0 0 auto; }
 .steam-search-preview input { width: 100%; min-width: 0; background: transparent; border: 0; outline: 0; color: #1b2838; font: inherit; }
@@ -151,8 +160,12 @@ details.advanced[open] summary { margin-bottom: .5rem; }
 .row-featured-meta { display: contents; }
 .search-row-price { display: flex; align-items: center; gap: .35rem; min-height: 18px; }
 .search-row-price .discount-badge { padding: .15rem .35rem; font-size: 11px; border-radius: 2px; }
-.grid-section.search-mode .grid-rows { width: min(100%, 460px); margin-left: auto; margin-right: 0; }
-.grid-section.search-mode .row { grid-template-columns: 140px minmax(0, 1fr); }
+.grid-section.search-mode .grid-rows { width: min(100%, 460px); margin-left: auto; margin-right: 0; padding: .35rem .3rem; background: linear-gradient(to bottom, #3b4652 0%, #202a35 100%); border: 1px solid #52606d; border-radius: 3px; box-shadow: 0 2px 7px rgba(0, 0, 0, .45); }
+.grid-section.search-mode .row { grid-template-columns: 140px minmax(0, 1fr); padding: 0; margin-bottom: .3rem; background: #515c6e; border: 0; border-radius: 2px; }
+.grid-section.search-mode .row:last-child { margin-bottom: 0; }
+.grid-section.search-mode .row.active { background: #5c697b; }
+.grid-section.search-mode .row-name { color: white; }
+.grid-section.search-mode .row-tags, .grid-section.search-mode .row-date { color: inherit; }
 
 /* Single-line truncated text — used in row names, row tags, and the modal lists. */
 .row-name, .row-tags, .search-result > span, .rotation-row .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

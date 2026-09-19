@@ -49,18 +49,13 @@
             <small x-text="`${capsuleConfig.width} × ${capsuleConfig.height} — ${capsuleConfig.label} capsule`"></small>
           </span>
         </template>
-        <input type="file" accept="image/*" class="visually-hidden" @change="onCapsuleSelected($event)">
+        <input type="file" accept="image/*" class="visually-hidden" @change="userGame.activeCapsuleId ? uploadViaCapsuleUpdate($event) : uploadForNewCapsuleConcept($event)">
         <template x-if="userGame.capsule">
           <div class="preview-actions">
             <button type="button" class="icon-btn" @click.prevent.stop="recropActive()" aria-label="Re-crop" title="Re-crop">
               <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M4 1v11h11"/>
                 <path d="M1 4h11v11"/>
-              </svg>
-            </button>
-            <button type="button" class="icon-btn" @click.prevent.stop="clearCapsule()" aria-label="Deselect" title="Deselect">
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-                <path d="M3 3l10 10M13 3L3 13"/>
               </svg>
             </button>
           </div>
@@ -71,7 +66,7 @@
       <div class="capsule-library">
         <label class="capsule-thumb add-thumb" title="Upload a new capsule">
           <span>+</span>
-          <input type="file" accept="image/*" class="visually-hidden" @change="onCapsuleSelected($event)">
+          <input type="file" accept="image/*" class="visually-hidden" @change="uploadForNewCapsuleConcept($event)">
         </label>
         <template x-for="cap in capsuleLibrary" :key="cap.id">
           <div class="capsule-thumb"
@@ -79,7 +74,7 @@
                @click="selectCapsule(cap)"
                title="Click to select; hover × to delete">
             <img :src="capsuleImage(cap)" alt="">
-            <button type="button" class="remove-x" @click.stop="deleteCapsule(cap)" aria-label="Delete capsule">×</button>
+            <button type="button" class="remove-x" @click.stop="requestDeleteCapsule(cap)" aria-label="Delete capsule">×</button>
           </div>
         </template>
       </div>
@@ -205,7 +200,7 @@
     <p class="warn-severe" x-show="loadError" x-text="loadError"></p>
     <p class="empty-prompt" x-show="!userGame.capsule && !loadError">Upload a capsule above to drop yours in.</p>
 
-    <div class="grid-layout">
+    <div class="grid-layout" :style="comparisonMinHeight ? `min-height: ${comparisonMinHeight}px` : ''">
       <div class="search-results-column">
         <div class="steam-search-preview" x-show="capsuleMode === 'search'" x-cloak aria-label="Steam search preview">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -218,7 +213,7 @@
         <template x-for="row in displayedRows" :key="row.key">
           <li class="row"
               :class="{ active: activeRowKey === row.key }"
-              @mouseenter="if (!isMobile) activeRowKey = row.key"
+              @mouseenter="if (!isMobile) setActiveRow(row.key)"
               @click="onRowClick(row.key, $event)">
             <div class="row-capsule">
               <img :src="capsuleUrl(row)" alt="" :width="capsuleConfig.width" :height="capsuleConfig.height" loading="lazy" decoding="async" @error="onCapsuleImageError(row)">
@@ -289,7 +284,7 @@
                 <p class="no-shots">No screenshots available.</p>
               </template>
               <template x-for="shot in screenshotsFor(activeRow)" :key="shot.key">
-                <img :src="shot.src" alt="" width="600" height="338" loading="lazy" decoding="async" @error="$event.target.style.display='none'">
+                <img :src="shot.src" alt="" width="600" height="338" loading="lazy" decoding="async" @load="scheduleComparisonHeight()" @error="$event.target.style.display='none'; scheduleComparisonHeight()">
               </template>
             </div>
           </div>
@@ -324,6 +319,21 @@
       <div class="crop-actions">
         <button type="button" @click="cancelCrop()">Cancel</button>
         <button type="button" class="primary" @click="applyCrop()">Use this crop</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="delete-confirm-modal"
+       x-show="deleteConfirmOpen"
+       x-cloak
+       @click.self="cancelDeleteCapsule()"
+       @keydown.escape.window="if (deleteConfirmOpen) cancelDeleteCapsule()">
+    <div class="delete-confirm-inner" role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title">
+      <h3 id="delete-confirm-title">Delete capsule?</h3>
+      <p>This removes both Featured and Search versions.</p>
+      <div class="delete-confirm-actions">
+        <button type="button" @click="cancelDeleteCapsule()">Cancel</button>
+        <button type="button" class="danger" @click="confirmDeleteCapsule()">Delete</button>
       </div>
     </div>
   </div>

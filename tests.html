@@ -34,21 +34,30 @@
 
     window.addEventListener('load', () => {
       // capsule modes
-      const hasCapsuleModeHelpers = typeof capsuleModeConfig === 'function' && typeof capsuleVariantImage === 'function' && typeof initialCapsuleVariants === 'function' && typeof capsuleDisplayHeight === 'function';
+      const hasCapsuleModeHelpers = typeof capsuleModeConfig === 'function' && typeof capsuleVariantImage === 'function' && typeof initialCapsuleVariants === 'function' && typeof capsuleDisplayHeight === 'function' && typeof capsuleRuntimeDimensions === 'function' && typeof capsuleUploadTarget === 'function' && typeof assetPreviewLayoutHeight === 'function' && typeof nextCapsuleAfterDelete === 'function';
       assert('capsule mode helpers exist', hasCapsuleModeHelpers);
       if (hasCapsuleModeHelpers) {
         eq('featured capsule dimensions', capsuleModeConfig('newAndTrending'), { width: 460, height: 215, label: 'Featured' });
         eq('search capsule dimensions', capsuleModeConfig('search'), { width: 231, height: 87, label: 'Search' });
         eq('featured preview height at native width', capsuleDisplayHeight('newAndTrending', 460), 215);
+        eq('featured runtime dimensions', capsuleRuntimeDimensions('newAndTrending'), { width: 920, height: 430 });
+        eq('search runtime dimensions stay high resolution', capsuleRuntimeDimensions('search'), { width: 920, height: 346 });
         eq('search preview height at featured width', capsuleDisplayHeight('search', 460), 173);
+        eq('new upload has no edit target', capsuleUploadTarget('new', 'capsule-1'), null);
+        eq('update upload targets active capsule', capsuleUploadTarget('update', 'capsule-1'), 'capsule-1');
+        eq('update upload without active capsule creates new target', capsuleUploadTarget('update', null), null);
+        eq('asset preview reserves padding', assetPreviewLayoutHeight(800), 812);
+        eq('next capsule selects following entry', nextCapsuleAfterDelete(['a', 'b', 'c'], 'b'), 'c');
+        eq('next capsule falls back to previous entry', nextCapsuleAfterDelete(['a', 'b'], 'b'), 'a');
+        eq('next capsule is null when list empties', nextCapsuleAfterDelete(['a'], 'a'), null);
         eq('unknown capsule mode falls back to featured', capsuleModeConfig('unknown'), { width: 460, height: 215, label: 'Featured' });
         eq('variant image uses selected mode', capsuleVariantImage({ newAndTrending: { imageData: 'featured' }, search: { imageData: 'search' } }, 'search'), 'search');
         eq('variant image falls back to featured', capsuleVariantImage({ newAndTrending: { imageData: 'featured' }, search: null }, 'search'), 'featured');
-        const firstVariant = { imageData: 'first', cropState: { x: 1, y: 2, width: 3, height: 4 } };
-        const initialVariants = initialCapsuleVariants(firstVariant);
-        eq('new upload copies first image to featured', initialVariants.newAndTrending.imageData, 'first');
-        eq('new upload copies first image to search', initialVariants.search.imageData, 'first');
+        const featuredVariant = { imageData: 'featured', cropState: { x: 1, y: 2, width: 3, height: 4 } };
+        const searchVariant = { imageData: 'search', cropState: { x: 5, y: 6, width: 7, height: 8 } };
+        const initialVariants = initialCapsuleVariants(featuredVariant, searchVariant);
         assert('new upload variants are independent', initialVariants.newAndTrending !== initialVariants.search);
+        assert('new upload variant images are distinct', initialVariants.newAndTrending.imageData !== initialVariants.search.imageData);
       }
 
       // classifyAspectRatio
