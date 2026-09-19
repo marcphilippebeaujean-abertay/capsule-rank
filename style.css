@@ -44,7 +44,9 @@ a, .link { color: var(--accent); }
 /* ===== Editor ===== */
 .editor { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: 2rem; padding: 1rem 2rem; }
 .editor-visuals { display: flex; flex-direction: column; gap: 1rem; }
-.capsule-preview { display: block; width: 460px; max-width: 100%; aspect-ratio: 460 / 215; background: var(--bg-input); border: 2px dashed var(--border-muted); border-radius: 4px; overflow: hidden; position: relative; cursor: pointer; transition: border-color 100ms linear, background 100ms linear; }
+.capsule-mode-control { display: flex; align-items: center; gap: .6rem; color: var(--text-muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+.capsule-preview { display: grid; place-items: center; width: 460px; max-width: 100%; aspect-ratio: 460 / 215; background: var(--bg-input); border: 2px dashed var(--border-muted); border-radius: 4px; overflow: hidden; position: relative; cursor: pointer; transition: border-color 100ms linear, background 100ms linear; }
+.capsule-preview-frame { width: 100%; max-height: 100%; position: relative; overflow: hidden; }
 .capsule-preview:hover { border-color: var(--accent); }
 .capsule-preview.has-image { border: 1px solid var(--accent); }
 .capsule-preview.drag-active { border-color: var(--accent); background: var(--bg-modal-border); }
@@ -102,7 +104,11 @@ details.advanced[open] summary { margin-bottom: .5rem; }
 .grid-section { padding: 2rem 2rem 4rem; border-top: 1px solid rgba(102, 192, 245, .15); margin-top: 1rem; }
 .grid-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: .75rem; }
 .grid-header h2 { color: white; margin: 0; font-size: 18px; text-transform: uppercase; letter-spacing: .05em; }
-.grid-actions { display: flex; gap: .5rem; }
+.grid-actions { display: flex; gap: .5rem; align-items: center; }
+.capsule-mode-toggle { display: flex; border: 1px solid var(--bg-modal-border); border-radius: 2px; overflow: hidden; }
+.capsule-mode-toggle button { background: var(--bg-base-darker); color: var(--text-muted); border: 0; border-right: 1px solid var(--bg-modal-border); cursor: pointer; font: inherit; padding: .45rem .65rem; }
+.capsule-mode-toggle button:last-child { border-right: 0; }
+.capsule-mode-toggle button:hover, .capsule-mode-toggle button.active { background: #1b4b6f; color: white; }
 
 /* Steam-blue primary button — shared between Shuffle / Edit games / crop "Use this crop". */
 .refresh-btn, .crop-actions button.primary {
@@ -113,9 +119,24 @@ details.advanced[open] summary { margin-bottom: .5rem; }
   background: linear-gradient(to bottom, var(--accent-hover-top), var(--accent-hover-bottom));
 }
 .refresh-btn { display: inline-flex; align-items: center; gap: .4rem; padding: .5rem 1rem; border-radius: 2px; }
+.delete-confirm-modal { position: fixed; inset: 0; z-index: 120; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(0, 0, 0, .75); }
+.delete-confirm-inner { width: min(100%, 360px); padding: 1.25rem; background: var(--bg-base); border: 1px solid var(--bg-modal-border); border-radius: 4px; box-shadow: 0 12px 32px rgba(0, 0, 0, .55); }
+.delete-confirm-inner h3 { margin: 0 0 .5rem; color: white; font-size: 18px; }
+.delete-confirm-inner p { margin: 0; color: var(--text-muted); font-size: 13px; }
+.delete-confirm-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1.25rem; }
+.delete-confirm-actions button { padding: .45rem .8rem; background: var(--bg-modal-border); border: 1px solid var(--border-muted); border-radius: 2px; color: var(--text-main); cursor: pointer; font: inherit; }
+.delete-confirm-actions button:hover { background: #36556f; color: white; }
+.delete-confirm-actions button.danger { background: #8b3030; border-color: #b84a4a; color: white; }
+.delete-confirm-actions button.danger:hover { background: #ad3b3b; }
 .refresh-btn svg { width: 14px; height: 14px; display: block; }
 
 .empty-prompt { color: var(--text-placeholder); padding: .5rem 0; }
+.search-results-column { min-width: 0; }
+.steam-search-preview { display: flex; align-items: center; gap: .55rem; width: min(100%, 460px); box-sizing: border-box; margin: 0 0 .75rem auto; padding: .35rem .65rem; background: #242b35; border: 0; border-radius: 2px; color: #a7b3c2; box-shadow: 0 2px 5px rgba(0, 0, 0, .3); }
+.grid-section.search-mode .search-results-column { display: flex; flex-direction: column; align-items: flex-end; }
+.steam-search-preview svg { width: 15px; height: 15px; flex: 0 0 auto; }
+.steam-search-preview input { width: 100%; min-width: 0; background: transparent; border: 0; outline: 0; color: #1b2838; font: inherit; }
+.steam-search-preview input::placeholder { color: #5d7890; opacity: 1; }
 .grid-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: .75rem; align-items: start; position: relative; }
 .grid-rows { list-style: none; margin: 0; padding: 0; }
 .row {
@@ -133,8 +154,18 @@ details.advanced[open] summary { margin-bottom: .5rem; }
 .row.active .row-name { color: white; }
 .row.active .row-tags, .row.active .row-date { color: rgba(27, 40, 56, .85); }
 .row-capsule { width: 140px; aspect-ratio: 460 / 215; overflow: hidden; background: var(--bg-deep); }
+.grid-section.search-mode .row-capsule { aspect-ratio: 231 / 87; }
 .row-capsule img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .row-meta { min-width: 0; }
+.row-featured-meta { display: contents; }
+.search-row-price { display: flex; align-items: center; gap: .35rem; min-height: 18px; }
+.search-row-price .discount-badge { padding: .15rem .35rem; font-size: 11px; border-radius: 2px; }
+.grid-section.search-mode .grid-rows { width: min(100%, 460px); margin-left: auto; margin-right: 0; padding: .35rem .3rem; background: linear-gradient(to bottom, #3b4652 0%, #202a35 100%); border: 1px solid #52606d; border-radius: 3px; box-shadow: 0 2px 7px rgba(0, 0, 0, .45); }
+.grid-section.search-mode .row { grid-template-columns: 140px minmax(0, 1fr); padding: 0; margin-bottom: .3rem; background: #515c6e; border: 0; border-radius: 2px; }
+.grid-section.search-mode .row:last-child { margin-bottom: 0; }
+.grid-section.search-mode .row.active { background: #5c697b; }
+.grid-section.search-mode .row-name { color: white; }
+.grid-section.search-mode .row-tags, .grid-section.search-mode .row-date { color: inherit; }
 
 /* Single-line truncated text — used in row names, row tags, and the modal lists. */
 .row-name, .row-tags, .search-result > span, .rotation-row .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -259,6 +290,7 @@ details.advanced[open] summary { margin-bottom: .5rem; }
     grid-template-rows: auto auto auto;
     gap: .35rem .75rem;
   }
+  .grid-section.search-mode .row { grid-template-columns: 130px 1fr; }
   .row-capsule { width: 130px; grid-row: span 3; }
   .row-meta { grid-column: 2; }
   .row-price-block { grid-column: 2; justify-self: start; }

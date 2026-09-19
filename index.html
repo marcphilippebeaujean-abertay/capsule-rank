@@ -18,16 +18,25 @@
 
   <main>
   <section class="editor" aria-label="Editor">
-    <div class="editor-visuals">
+    <div class="editor-visuals" :class="{ 'search-mode': capsuleMode === 'search' }">
+      <div class="capsule-mode-control">
+        <span>Capsule format</span>
+        <div class="capsule-mode-toggle" role="group" aria-label="Capsule style">
+          <button type="button" :class="{ active: capsuleMode === 'newAndTrending' }" @click="setCapsuleMode('newAndTrending')">Featured</button>
+          <button type="button" :class="{ active: capsuleMode === 'search' }" @click="setCapsuleMode('search')">Search</button>
+        </div>
+      </div>
       <label class="capsule-preview"
              :class="{ 'has-image': userGame.capsule, 'drag-active': dragActive }"
+             :style="`height: ${featuredCapsuleHeight}px`"
              title="Click or drop a capsule image"
              @dragover.prevent="dragActive = true"
              @dragenter.prevent="dragActive = true"
              @dragleave.self="dragActive = false"
              @drop.prevent="onCapsuleDropped($event)">
+        <div class="capsule-preview-frame" :style="`aspect-ratio: ${capsuleConfig.width} / ${capsuleConfig.height}`">
         <template x-if="userGame.capsule">
-          <img :src="userGame.capsule" alt="Active capsule">
+          <img :src="activeCapsuleImage" alt="Active capsule">
         </template>
         <template x-if="!userGame.capsule">
           <span class="placeholder">
@@ -37,10 +46,10 @@
               <path d="M12 3v12"/>
             </svg>
             <strong>Drop a capsule or click to upload</strong>
-            <small>460 × 215 — Steam header capsule</small>
+            <small x-text="`${capsuleConfig.width} × ${capsuleConfig.height} — ${capsuleConfig.label} capsule`"></small>
           </span>
         </template>
-        <input type="file" accept="image/*" class="visually-hidden" @change="onCapsuleSelected($event)">
+        <input type="file" accept="image/*" class="visually-hidden" @change="userGame.activeCapsuleId ? uploadViaCapsuleUpdate($event) : uploadForNewCapsuleConcept($event)">
         <template x-if="userGame.capsule">
           <div class="preview-actions">
             <button type="button" class="icon-btn" @click.prevent.stop="recropActive()" aria-label="Re-crop" title="Re-crop">
@@ -49,27 +58,23 @@
                 <path d="M1 4h11v11"/>
               </svg>
             </button>
-            <button type="button" class="icon-btn" @click.prevent.stop="clearCapsule()" aria-label="Deselect" title="Deselect">
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-                <path d="M3 3l10 10M13 3L3 13"/>
-              </svg>
-            </button>
           </div>
         </template>
+        </div>
       </label>
 
       <div class="capsule-library">
         <label class="capsule-thumb add-thumb" title="Upload a new capsule">
           <span>+</span>
-          <input type="file" accept="image/*" class="visually-hidden" @change="onCapsuleSelected($event)">
+          <input type="file" accept="image/*" class="visually-hidden" @change="uploadForNewCapsuleConcept($event)">
         </label>
         <template x-for="cap in capsuleLibrary" :key="cap.id">
           <div class="capsule-thumb"
                :class="{ active: userGame.activeCapsuleId === cap.id }"
                @click="selectCapsule(cap)"
                title="Click to select; hover × to delete">
-            <img :src="cap.dataUrl" alt="">
-            <button type="button" class="remove-x" @click.stop="deleteCapsule(cap)" aria-label="Delete capsule">×</button>
+            <img :src="capsuleImage(cap)" alt="">
+            <button type="button" class="remove-x" @click.stop="requestDeleteCapsule(cap)" aria-label="Delete capsule">×</button>
           </div>
         </template>
       </div>
@@ -169,9 +174,9 @@
     </div>
   </section>
 
-  <section class="grid-section" aria-label="Grid">
+  <section class="grid-section" :class="{ 'search-mode': capsuleMode === 'search' }" aria-label="Grid">
     <div class="grid-header">
-      <h2>New &amp; Trending</h2>
+      <h2 x-text="capsuleMode === 'search' ? 'Steam Search' : 'New & Trending'"></h2>
       <div class="grid-actions">
         <button type="button" class="refresh-btn" @click="openEditGames()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -195,38 +200,66 @@
     <p class="warn-severe" x-show="loadError" x-text="loadError"></p>
     <p class="empty-prompt" x-show="!userGame.capsule && !loadError">Upload a capsule above to drop yours in.</p>
 
-    <div class="grid-layout">
-      <ol class="grid-rows">
+    <div class="grid-layout" :style="comparisonMinHeight ? `min-height: ${comparisonMinHeight}px` : ''">
+      <div class="search-results-column">
+        <div class="steam-search-preview" x-show="capsuleMode === 'search'" x-cloak aria-label="Steam search preview">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"/>
+            <path d="m20 20-4-4"/>
+          </svg>
+          <input type="search" placeholder="Search the Store" disabled aria-label="Search the Store">
+        </div>
+        <ol class="grid-rows">
         <template x-for="row in displayedRows" :key="row.key">
           <li class="row"
               :class="{ active: activeRowKey === row.key }"
-              @mouseenter="if (!isMobile) activeRowKey = row.key"
+              @mouseenter="if (!isMobile) setActiveRow(row.key)"
               @click="onRowClick(row.key, $event)">
             <div class="row-capsule">
-              <img :src="capsuleUrl(row)" alt="" width="460" height="215" loading="lazy" decoding="async" @error="onCapsuleImageError(row)">
+              <img :src="capsuleUrl(row)" alt="" :width="capsuleConfig.width" :height="capsuleConfig.height" loading="lazy" decoding="async" @error="onCapsuleImageError(row)">
             </div>
             <div class="row-meta">
               <div class="row-name" x-text="row.name"></div>
-              <div class="row-platforms">
-                <template x-if="row.platforms?.includes('windows')"><span class="plat win" title="Windows"></span></template>
-                <template x-if="row.platforms?.includes('mac')"><span class="plat mac" title="Mac"></span></template>
-                <template x-if="row.platforms?.includes('linux')"><span class="plat linux" title="Linux"></span></template>
-              </div>
-              <div class="row-tags" x-text="(row.tags || []).join(', ')"></div>
-            </div>
-            <template x-if="priceFor(row).discountLabel">
-              <span class="discount-badge" x-text="priceFor(row).discountLabel"></span>
-            </template>
-            <div class="price-stack" :class="{ 'no-discount': !priceFor(row).discountLabel }">
-              <template x-if="priceFor(row).original">
-                <div class="price-original" x-text="priceFor(row).original"></div>
+              <template x-if="capsuleMode !== 'search'">
+                <div>
+                  <div class="row-platforms">
+                    <template x-if="row.platforms?.includes('windows')"><span class="plat win" title="Windows"></span></template>
+                    <template x-if="row.platforms?.includes('mac')"><span class="plat mac" title="Mac"></span></template>
+                    <template x-if="row.platforms?.includes('linux')"><span class="plat linux" title="Linux"></span></template>
+                  </div>
+                  <div class="row-tags" x-text="(row.tags || []).join(', ')"></div>
+                </div>
               </template>
-              <div class="price-final" :class="{ 'is-discounted': priceFor(row).discountLabel }" x-text="priceFor(row).final"></div>
+              <template x-if="capsuleMode === 'search'">
+                <div class="search-row-price">
+                  <template x-if="priceFor(row).original">
+                    <span class="price-original" x-text="priceFor(row).original"></span>
+                  </template>
+                  <span class="price-final" :class="{ 'is-discounted': priceFor(row).discountLabel }" x-text="priceFor(row).final"></span>
+                  <template x-if="priceFor(row).discountLabel">
+                    <span class="discount-badge" x-text="priceFor(row).discountLabel"></span>
+                  </template>
+                </div>
+              </template>
             </div>
-            <div class="row-date" x-text="dateFor(row)"></div>
+            <template x-if="capsuleMode !== 'search'">
+              <div class="row-featured-meta">
+                <template x-if="priceFor(row).discountLabel">
+                  <span class="discount-badge" x-text="priceFor(row).discountLabel"></span>
+                </template>
+                <div class="price-stack" :class="{ 'no-discount': !priceFor(row).discountLabel }">
+                  <template x-if="priceFor(row).original">
+                    <div class="price-original" x-text="priceFor(row).original"></div>
+                  </template>
+                  <div class="price-final" :class="{ 'is-discounted': priceFor(row).discountLabel }" x-text="priceFor(row).final"></div>
+                </div>
+                <div class="row-date" x-text="dateFor(row)"></div>
+              </div>
+            </template>
           </li>
         </template>
-      </ol>
+        </ol>
+      </div>
 
       <aside class="sidebar"
              :class="{ 'mobile-open': isMobile && mobileSidebarOpen }"
@@ -251,7 +284,7 @@
                 <p class="no-shots">No screenshots available.</p>
               </template>
               <template x-for="shot in screenshotsFor(activeRow)" :key="shot.key">
-                <img :src="shot.src" alt="" width="600" height="338" loading="lazy" decoding="async" @error="$event.target.style.display='none'">
+                <img :src="shot.src" alt="" width="600" height="338" loading="lazy" decoding="async" @load="scheduleComparisonHeight()" @error="$event.target.style.display='none'; scheduleComparisonHeight()">
               </template>
             </div>
           </div>
@@ -272,8 +305,8 @@
   <div class="crop-modal" x-show="cropping" x-cloak
        @keydown.escape.window="if (cropping) cancelCrop()">
     <div class="crop-modal-inner">
-      <p class="crop-hint">Drag the image to choose what shows in the 460 × 215 capsule.</p>
-      <div class="crop-stage"
+      <p class="crop-hint" x-text="`Drag image to choose what shows in ${cropConfig.width} × ${cropConfig.height} ${cropConfig.label.toLowerCase()} capsule.`"></p>
+      <div class="crop-stage" :style="`width: ${cropConfig.width}px; height: ${cropConfig.height}px`"
            @pointerdown.prevent="startCrop($event)"
            @pointermove="dragCrop($event)"
            @pointerup="endCrop()"
@@ -286,6 +319,21 @@
       <div class="crop-actions">
         <button type="button" @click="cancelCrop()">Cancel</button>
         <button type="button" class="primary" @click="applyCrop()">Use this crop</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="delete-confirm-modal"
+       x-show="deleteConfirmOpen"
+       x-cloak
+       @click.self="cancelDeleteCapsule()"
+       @keydown.escape.window="if (deleteConfirmOpen) cancelDeleteCapsule()">
+    <div class="delete-confirm-inner" role="dialog" aria-modal="true" aria-labelledby="delete-confirm-title">
+      <h3 id="delete-confirm-title">Delete capsule?</h3>
+      <p>This removes both Featured and Search versions.</p>
+      <div class="delete-confirm-actions">
+        <button type="button" @click="cancelDeleteCapsule()">Cancel</button>
+        <button type="button" class="danger" @click="confirmDeleteCapsule()">Delete</button>
       </div>
     </div>
   </div>
