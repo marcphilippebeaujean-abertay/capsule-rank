@@ -4,7 +4,35 @@
 // ===== Pure helpers (also exposed to tests.html) =====
 
 const STEAM_HEADER_RATIO = 460 / 215; // ≈ 2.1395
+const CAPSULE_MODE_CONFIG = {
+  newAndTrending: { width: 460, height: 215, label: 'Featured' },
+  search: { width: 231, height: 87, label: 'Search' },
+};
 const STORAGE_KEY = 'capsuleRank.userGame';
+const VIEW_MODE_KEY = 'capsuleRank.viewMode';
+
+function capsuleModeConfig(mode) {
+  return CAPSULE_MODE_CONFIG[mode] || CAPSULE_MODE_CONFIG.newAndTrending;
+}
+
+function capsuleDisplayHeight(mode, displayWidth) {
+  const { width, height } = capsuleModeConfig(mode);
+  return Math.round(displayWidth * height / width);
+}
+
+function capsuleVariantImage(record, mode) {
+  const selected = record?.[mode]?.imageData;
+  return selected || record?.newAndTrending?.imageData || null;
+}
+
+function initialCapsuleVariants(variant) {
+  const copy = () => ({
+    imageData: variant.imageData,
+    cropState: variant.cropState ? { ...variant.cropState } : null,
+  });
+  return { newAndTrending: copy(), search: copy() };
+}
+
 const ROTATION_KEY = 'capsuleRank.rotation';
 
 // Steam proxy lives on the kings-path-save-system Firebase project's hosting
@@ -146,9 +174,10 @@ function debounce(fn, ms) {
   };
 }
 
-function capsuleUrl(row) {
+function capsuleUrl(row, mode = 'newAndTrending') {
   if (row.isUser) return row.capsule;
-  return `https://cdn.cloudflare.steamstatic.com/steam/apps/${row.appid}/header.jpg`;
+  const image = mode === 'search' ? 'capsule_231x87.jpg' : 'header.jpg';
+  return `https://cdn.cloudflare.steamstatic.com/steam/apps/${row.appid}/${image}`;
 }
 
 function screenshotUrl(row, ssid) {
@@ -243,6 +272,7 @@ function capsuleRankApp() {
     sampledGames: [],
     userInsertIndex: null,
     activeRowKey: null,
+    capsuleMode: 'newAndTrending',
 
     // Mobile sidebar overlay state.
     isMobile: false,
@@ -258,6 +288,7 @@ function capsuleRankApp() {
     cropOffsetY: 0,
     cropDragStart: null,
     cropEditingId: null,         // when set, applyCrop updates that library record instead of creating a new one
+    cropVariant: 'newAndTrending',
     dragActive: false,           // true while a file is being dragged over the capsule preview
 
     // Edit-games modal + Steam search state (transient).
@@ -340,6 +371,8 @@ function capsuleRankApp() {
 
     hydrate() {
       try {
+        const savedMode = localStorage.getItem(VIEW_MODE_KEY);
+        if (CAPSULE_MODE_CONFIG[savedMode]) this.capsuleMode = savedMode;
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return;
         const saved = JSON.parse(raw);
@@ -413,7 +446,7 @@ function capsuleRankApp() {
         rows.splice(this.userInsertIndex, 0, {
           key: 'user',
           isUser: true,
-          capsule: u.capsule,
+          capsule: this.activeCapsuleImage,
           name: u.name || 'Untitled',
           tags: u.tags,
           price: u.price,
@@ -432,6 +465,19 @@ function capsuleRankApp() {
       return this.displayedRows.find(r => r.key === this.activeRowKey) || this.displayedRows[0] || null;
     },
 
+    get capsuleConfig() { return capsuleModeConfig(this.capsuleMode); },
+    get featuredCapsuleHeight() {
+      const { width } = capsuleModeConfig('newAndTrending');
+      return capsuleDisplayHeight('newAndTrending', width);
+    },
+    get cropConfig() { return capsuleModeConfig(this.cropVariant); },
+    get activeCapsule() {
+      return this.capsuleLibrary.find(c => c.id === this.userGame.activeCapsuleId) || null;
+    },
+    get activeCapsuleImage() {
+      return capsuleVariantImage(this.activeCapsule, this.capsuleMode) || this.userGame.capsule;
+    },
+
     refresh() {
       const hasUser = !!this.userGame.capsule;
       const sampleSize = hasUser ? 9 : 10;
@@ -446,7 +492,13 @@ function capsuleRankApp() {
 
     priceFor(row) { return formatPrice(row.price ?? 1199, row.discountPct ?? 0); },
     dateFor(row) { return formatReleaseDate(row.releaseDate); },
-    capsuleUrl(row) { return capsuleUrl(row); },
+    capsuleUrl(row) { return capsuleUrl(row, this.capsuleMode); },
+    capsuleImage(record) { return capsuleVariantImage(record, this.capsuleMode); },
+    setCapsuleMode(mode) {
+      this.capsuleMode = CAPSULE_MODE_CONFIG[mode] ? mode : 'newAndTrending';
+      try { localStorage.setItem(VIEW_MODE_KEY, this.capsuleMode); } catch {}
+      if (this.userGame.capsule) this.userGame.capsule = this.activeCapsuleImage;
+    },
     screenshotsFor(row) {
       const ids = row.screenshotIds || [];
       return ids.map((id, i) => ({ key: row.key + '-ss-' + i, src: screenshotUrl(row, id) }));
@@ -457,6 +509,7 @@ function capsuleRankApp() {
       try {
         const dataUrl = await readFileAsDataURL(file);
         const { width, height } = await imageDimensions(dataUrl);
+        this.cropVariant = this.capsuleMode;
         this.cropSourceUrl = dataUrl;
         this.cropSourceW = width;
         this.cropSourceH = height;
@@ -483,7 +536,7 @@ function capsuleRankApp() {
 
     // Internal helper: returns { displayW, displayH, scale, x: slackX, y: slackY } for given source dims.
     cropMetrics(srcW, srcH) {
-      const VW = 460, VH = 215;
+      const { width: VW, height: VH } = this.cropConfig;
       const scale = Math.max(VW / srcW, VH / srcH);
       const displayW = srcW * scale;
       const displayH = srcH * scale;
@@ -528,22 +581,21 @@ function capsuleRankApp() {
 
     async applyCrop() {
       const m = this.cropMetrics(this.cropSourceW, this.cropSourceH);
-      const sx = -this.cropOffsetX / m.scale;
-      const sy = -this.cropOffsetY / m.scale;
-      const sw = 460 / m.scale;
-      const sh = 215 / m.scale;
+      const { width, height } = this.cropConfig;
+      const cropState = {
+        x: -this.cropOffsetX / m.scale,
+        y: -this.cropOffsetY / m.scale,
+        width: width / m.scale,
+        height: height / m.scale,
+      };
       try {
-        const cropped = await cropToDataURL(this.cropSourceUrl, { x: sx, y: sy, width: sw, height: sh }, 460, 215);
+        const cropped = await cropToDataURL(this.cropSourceUrl, cropState, width, height);
+        const variant = { imageData: cropped, cropState };
 
         if (this.cropEditingId) {
           const idx = this.capsuleLibrary.findIndex(c => c.id === this.cropEditingId);
           if (idx >= 0) {
-            const updated = {
-              ...this.capsuleLibrary[idx],
-              dataUrl: cropped,
-              cropOffsetX: this.cropOffsetX,
-              cropOffsetY: this.cropOffsetY,
-            };
+            const updated = { ...this.capsuleLibrary[idx], [this.cropVariant]: variant };
             try { await dbPutCapsule(updated); } catch (e) { console.warn('IndexedDB write failed:', e); }
             this.capsuleLibrary = [
               ...this.capsuleLibrary.slice(0, idx),
@@ -557,20 +609,17 @@ function capsuleRankApp() {
         } else {
           const record = {
             id: newId(),
-            dataUrl: cropped,
             sourceDataUrl: this.cropSourceUrl,
             sourceW: this.cropSourceW,
             sourceH: this.cropSourceH,
-            cropOffsetX: this.cropOffsetX,
-            cropOffsetY: this.cropOffsetY,
+            ...initialCapsuleVariants(variant),
             createdAt: Date.now(),
           };
           try { await dbPutCapsule(record); } catch (e) { console.warn('IndexedDB write failed:', e); }
           this.capsuleLibrary = [record, ...this.capsuleLibrary];
-          const wasAbsent = !this.userGame.capsule;
           this.userGame.capsule = cropped;
           this.userGame.activeCapsuleId = record.id;
-          if (wasAbsent) this.refresh();
+          this.refresh();
         }
 
         this.cropping = false;
@@ -584,26 +633,22 @@ function capsuleRankApp() {
     async recropActive() {
       const record = this.capsuleLibrary.find(c => c.id === this.userGame.activeCapsuleId);
       if (!record) return;
-      // Prefer the original source (preserves slack to drag); fall back to the cropped image
-      // for legacy records that pre-date sourceDataUrl support.
-      const sourceUrl = record.sourceDataUrl || record.dataUrl;
-      let sourceW = record.sourceW, sourceH = record.sourceH;
-      if (!sourceW || !sourceH) {
-        try { ({ width: sourceW, height: sourceH } = await imageDimensions(sourceUrl)); }
-        catch (e) { console.warn('recrop: cannot read image dimensions', e); return; }
-      }
+      this.cropVariant = this.capsuleMode;
+      const sourceUrl = record.sourceDataUrl;
+      const sourceW = record.sourceW, sourceH = record.sourceH;
       this.cropSourceUrl = sourceUrl;
       this.cropSourceW = sourceW;
       this.cropSourceH = sourceH;
       const m = this.cropMetrics(sourceW, sourceH);
-      this.cropOffsetX = record.cropOffsetX ?? -m.slackX / 2;
-      this.cropOffsetY = record.cropOffsetY ?? -m.slackY / 2;
+      const cropState = record[this.cropVariant]?.cropState;
+      this.cropOffsetX = cropState ? -cropState.x * m.scale : -m.slackX / 2;
+      this.cropOffsetY = cropState ? -cropState.y * m.scale : -m.slackY / 2;
       this.cropEditingId = record.id;
       this.cropping = true;
     },
 
     selectCapsule(record) {
-      this.userGame.capsule = record.dataUrl;
+      this.userGame.capsule = capsuleVariantImage(record, this.capsuleMode);
       this.userGame.activeCapsuleId = record.id;
     },
 

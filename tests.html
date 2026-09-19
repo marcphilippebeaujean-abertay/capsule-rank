@@ -33,6 +33,24 @@
     }
 
     window.addEventListener('load', () => {
+      // capsule modes
+      const hasCapsuleModeHelpers = typeof capsuleModeConfig === 'function' && typeof capsuleVariantImage === 'function' && typeof initialCapsuleVariants === 'function' && typeof capsuleDisplayHeight === 'function';
+      assert('capsule mode helpers exist', hasCapsuleModeHelpers);
+      if (hasCapsuleModeHelpers) {
+        eq('featured capsule dimensions', capsuleModeConfig('newAndTrending'), { width: 460, height: 215, label: 'Featured' });
+        eq('search capsule dimensions', capsuleModeConfig('search'), { width: 231, height: 87, label: 'Search' });
+        eq('featured preview height at native width', capsuleDisplayHeight('newAndTrending', 460), 215);
+        eq('search preview height at featured width', capsuleDisplayHeight('search', 460), 173);
+        eq('unknown capsule mode falls back to featured', capsuleModeConfig('unknown'), { width: 460, height: 215, label: 'Featured' });
+        eq('variant image uses selected mode', capsuleVariantImage({ newAndTrending: { imageData: 'featured' }, search: { imageData: 'search' } }, 'search'), 'search');
+        eq('variant image falls back to featured', capsuleVariantImage({ newAndTrending: { imageData: 'featured' }, search: null }, 'search'), 'featured');
+        const firstVariant = { imageData: 'first', cropState: { x: 1, y: 2, width: 3, height: 4 } };
+        const initialVariants = initialCapsuleVariants(firstVariant);
+        eq('new upload copies first image to featured', initialVariants.newAndTrending.imageData, 'first');
+        eq('new upload copies first image to search', initialVariants.search.imageData, 'first');
+        assert('new upload variants are independent', initialVariants.newAndTrending !== initialVariants.search);
+      }
+
       // classifyAspectRatio
       eq('aspect ok at 460x215', classifyAspectRatio(460, 215), 'ok');
       eq('aspect ok at 920x430 (same ratio)', classifyAspectRatio(920, 430), 'ok');
